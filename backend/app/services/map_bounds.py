@@ -6,7 +6,7 @@ import math
 from ..config import MIAMI_BOUNDS
 from ..db import connect
 
-MAP_BUFFER_MILES = 10
+MAP_BUFFER_MILES = 30
 _EARTH_MILES = 3958.8
 
 
