@@ -12,7 +12,8 @@ function dismissStatusPreview(event: MouseEvent<HTMLAnchorElement>) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
   const link = event.currentTarget
   link.blur()
-  if (event.detail === 0 || event.nativeEvent.pointerType === 'touch') return
+  const pointerType = 'pointerType' in event.nativeEvent ? event.nativeEvent.pointerType : undefined
+  if (event.detail === 0 || pointerType === 'touch') return
   link.style.pointerEvents = 'none'
   const restore = () => {
     link.style.pointerEvents = ''
