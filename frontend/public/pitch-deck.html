@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SchoolMatch Miami — pitch</title>
+  <link rel="preconnect" href="https://rsms.me/" />
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+  <style>
+    :root {
+      --navy: #001098;
+      --navy-deep: #000b66;
+      --blue: #001ae6;
+      --accent: #00a8c6;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --paper: #f8fafc;
+      --public: #001ae6;
+      --charter: #7c3aed;
+      --private: #d97706;
+      --early: #059669;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #0b1020; color: var(--ink); font-family: var(--font); }
+    button, a { font-family: inherit; }
+    .deck { height: 100%; position: relative; overflow: hidden; }
+    .slide {
+      display: none;
+      height: 100%;
+      padding: clamp(28px, 5vh, 64px) clamp(28px, 6vw, 88px) 72px;
+      background: #fff;
+      flex-direction: column;
+    }
+    .slide.active { display: flex; }
+    .slide.dark { background: var(--navy); color: #fff; }
+    .kicker {
+      margin: 0 0 14px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .dark .kicker { color: #7ee7f7; }
+    h1 { margin: 0; font-size: clamp(40px, 5.4vw, 68px); line-height: 1.02; letter-spacing: -0.035em; font-weight: 640; max-width: 16ch; }
+    .slide.close h1 { max-width: 14ch; font-size: clamp(34px, 4.4vw, 58px); }
+    h2 { margin: 0; font-size: clamp(32px, 4vw, 52px); line-height: 1.05; letter-spacing: -0.03em; font-weight: 640; max-width: 18ch; }
+    .lede { margin: 22px 0 0; max-width: 38ch; font-size: clamp(18px, 2vw, 24px); line-height: 1.35; color: rgba(255,255,255,0.88); }
+    .sub { margin: 16px 0 0; max-width: 46ch; font-size: clamp(16px, 1.6vw, 20px); line-height: 1.45; color: var(--muted); }
+    .grow { flex: 1; }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      margin-top: auto;
+      padding-top: 20px;
+      font-size: 14px;
+    }
+    .dark .footer { color: rgba(255,255,255,0.72); }
+    .url { color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; }
+    .grid-2 { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(24px, 4vw, 56px); align-items: start; margin-top: 8px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 28px; }
+    .fact, .step, .stat, .source {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 18px 16px;
+      background: var(--paper);
+    }
+    .fact strong, .step strong { display: block; font-size: 18px; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .fact span, .step span, .source span { display: block; color: var(--muted); font-size: 15px; line-height: 1.4; }
+    .step em { display: block; font-style: normal; font-size: 12px; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .stat { background: #fff; }
+    .stat b { display: block; font-size: clamp(28px, 3vw, 40px); letter-spacing: -0.04em; line-height: 1; }
+    .stat span { display: block; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.35; }
+    .swatch { width: 28px; height: 4px; border-radius: 99px; margin-bottom: 14px; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; align-items: stretch; }
+    .panel { border-radius: 18px; padding: 22px 22px 18px; border: 1px solid var(--line); }
+    .panel h3 { margin: 0 0 8px; font-size: 18px; letter-spacing: -0.02em; }
+    .panel p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.45; }
+    .panel.no { background: #f8fafc; }
+    .panel.yes { background: #f3fbfb; border-color: #c9eef3; }
+    ol.clean { margin: 18px 0 0; padding: 0; list-style: none; }
+    ol.clean li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 16px; line-height: 1.4; }
+    ol.clean li:first-child { border-top: 0; }
+    ol.clean b { color: var(--navy); }
+    .sources { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .sources span { border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; font-size: 13px; color: var(--muted); }
+    .limits { margin: 22px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 28px; }
+    .limits li { font-size: 16px; line-height: 1.4; padding-left: 14px; border-left: 3px solid var(--accent); }
+    .nav {
+      position: fixed; left: 0; right: 0; bottom: 0; height: 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 18px; color: #94a3b8; font-size: 12px; letter-spacing: 0.04em;
+      background: rgba(11, 16, 32, 0.92);
+      z-index: 5;
+    }
+    .nav button {
+      background: transparent; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px; padding: 4px 10px; cursor: pointer;
+    }
+    .dots { display: flex; gap: 6px; }
+    .dots button { width: 7px; height: 7px; padding: 0; border-radius: 99px; border: 0; background: #334155; }
+    .dots button.on { background: #7ee7f7; }
+    .notes {
+      display: none; position: fixed; right: 16px; bottom: 60px; width: min(420px, calc(100% - 32px));
+      background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 14px 16px;
+      font-size: 14px; line-height: 1.45; z-index: 6;
+    }
+    .notes.show { display: block; }
+    .notes b { color: #7ee7f7; font-weight: 600; }
+    @media (max-width: 800px) {
+      .grid-2, .grid-3, .grid-4, .split, .limits { grid-template-columns: 1fr; }
+      .slide { padding: 24px 20px 64px; overflow: auto; }
+      h1 { font-size: 36px; }
+      h2 { font-size: 30px; }
+    }
+    @media print {
+      .nav, .notes { display: none !important; }
+      .deck { overflow: visible; height: auto; }
+      .slide { display: flex !important; min-height: 100vh; page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="deck" aria-live="polite">
+    <section class="slide dark active" data-note="Read the sentence, then open the app.">
+      <p class="kicker">eMerge AI Hackathon 2026 · Education</p>
+      <h1>SchoolMatch Miami</h1>
+      <p class="lede">Describe your family. The AI highlights the schools that fit them on a map of real Miami-Dade schools and child care.</p>
+      <div class="footer">
+        <span>Infancy through 12th grade</span>
+        <a class="url" href="https://emerge-ai-school-discovery-one.vercel.app/">emerge-ai-school-discovery-one.vercel.app</a>
+      </div>
+    </section>
+
+    <section class="slide" data-note="The hard part is holding all of this at once. Do not oversell it.">
+      <p class="kicker">The problem</p>
+      <h2>Choosing a school means balancing a family.</h2>
+      <div class="grid-4">
+        <div class="fact"><strong>The child</strong><span>Age, grade, and what they need</span></div>
+        <div class="fact"><strong>The school</strong><span>Quality, programs, and type</span></div>
+        <div class="fact"><strong>The place</strong><span>Home, work, and how far</span></div>
+        <div class="fact"><strong>The day</strong><span>Activities they already have</span></div>
+      </div>
+      <p class="sub">Those answers live in different places. The research piles up, and parents still have to picture the day.</p>
+    </section>
+
+    <section class="slide" data-note="You talk. The map highlights the matches.">
+      <p class="kicker">What happens</p>
+      <h2>You describe the family. The map answers.</h2>
+      <div class="grid-3">
+        <div class="step"><em>1</em><strong>Say it plainly</strong><span>The child, the neighborhood, and what matters.</span></div>
+        <div class="step"><em>2</em><strong>The AI highlights a few</strong><span>Up to five real schools. Pin 1 fits best.</span></div>
+        <div class="step"><em>3</em><strong>Open the card</strong><span>Why it fits, from the public record.</span></div>
+      </div>
+      <p class="sub">2,927 providers, infancy through 12th grade.</p>
+    </section>
+
+    <section class="slide" data-note="Point at home, work, and ballet on the live map.">
+      <p class="kicker">Why it is a map</p>
+      <h2>A list tells you the school. The map shows the day.</h2>
+      <div class="grid-3">
+        <div class="step"><em>Home</em><strong>Where the day starts</strong><span>Distance is part of the rank.</span></div>
+        <div class="step"><em>Work</em><strong>Where the adults go</strong><span>Mention a job and it joins the map.</span></div>
+        <div class="step"><em>Activities</em><strong>What they already do</strong><span>Ballet, practice, another child.</span></div>
+      </div>
+      <p class="sub">A parent can see whether a school fits the day they already have.</p>
+    </section>
+
+    <section class="slide" data-note="Three differences. Then one honesty line.">
+      <p class="kicker">Not a directory. Not a chatbot.</p>
+      <h2>The family, the data, and the map.</h2>
+      <div class="grid-3">
+        <div class="step"><em>The AI</em><strong>Understands the family</strong><span>Plain language becomes a real search.</span></div>
+        <div class="step"><em>The data</em><strong>Sets the order</strong><span>Distance, state grades, listed programs.</span></div>
+        <div class="step"><em>The map</em><strong>Makes it actionable</strong><span>You can see where to go next.</span></div>
+      </div>
+      <p class="sub">The model explains the list. It does not invent a school or a price.</p>
+    </section>
+
+    <section class="slide dark close" data-note="Say the line, then stop.">
+      <p class="kicker">SchoolMatch Miami</p>
+      <h1>The right school for their family.</h1>
+      <p class="lede">We’re not just helping parents find a good school. We’re helping them find the right school for their family.</p>
+      <div class="footer">
+        <a class="url" href="https://emerge-ai-school-discovery-one.vercel.app/">emerge-ai-school-discovery-one.vercel.app</a>
+        <span>2,927 real Miami-Dade providers</span>
+      </div>
+    </section>
+  </main>
+
+  <aside class="notes" id="notes"></aside>
+  <div class="nav">
+    <button type="button" id="prev" aria-label="Previous slide">Back</button>
+    <div class="dots" id="dots"></div>
+    <span id="count"></span>
+    <button type="button" id="next" aria-label="Next slide">Next</button>
+  </div>
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const notes = document.getElementById("notes");
+    const dots = document.getElementById("dots");
+    const count = document.getElementById("count");
+    let i = 0;
+    let showNotes = false;
+    slides.forEach((_, n) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label", "Slide " + (n + 1));
+      b.addEventListener("click", () => go(n));
+      dots.appendChild(b);
+    });
+    function go(n) {
+      i = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
+      Array.from(dots.children).forEach((d, idx) => d.classList.toggle("on", idx === i));
+      count.textContent = (i + 1) + " / " + slides.length;
+      notes.textContent = slides[i].dataset.note || "";
+    }
+    function step(d) { go(i + d); }
+    document.getElementById("prev").addEventListener("click", () => step(-1));
+    document.getElementById("next").addEventListener("click", () => step(1));
+    document.addEventListener("keydown", (e) => {
+      if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(e.key)) { e.preventDefault(); step(1); }
+      if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) { e.preventDefault(); step(-1); }
+      if (e.key === "n" || e.key === "N") {
+        showNotes = !showNotes;
+        notes.classList.toggle("show", showNotes);
+      }
+      if (e.key === "Home") go(0);
+      if (e.key === "End") go(slides.length - 1);
+    });
+    go(0);
+  </script>
+</body>
+</html>
