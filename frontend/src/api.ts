@@ -1,7 +1,11 @@
 import type { AppConfig, HouseholdState, RecommendResponse, School, SessionState } from './types'
 
-async function http<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, { headers: { 'content-type': 'application/json' }, ...init })
+// Empty in local dev, where Vite proxies /api to the API on port 8000.
+// Production builds set VITE_API_BASE to the Render origin, with no trailing slash.
+const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '')
+
+async function http<T>(path: string, init?: RequestInit): Promise<T> {
+  const r = await fetch(`${API_BASE}${path}`, { headers: { 'content-type': 'application/json' }, ...init })
   if (!r.ok) {
     let detail = r.statusText
     try {

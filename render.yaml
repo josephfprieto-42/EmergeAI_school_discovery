@@ -1,0 +1,26 @@
+# Render Blueprint for the SchoolMatch API.
+# Secrets (OPENAI_API_KEY, GOOGLE_MAPS_BROWSER_KEY, GOOGLE_MAP_ID, CORS_ORIGINS)
+# are set in the Render dashboard and are not stored here.
+services:
+  - type: web
+    name: schoolmatch-api
+    runtime: python
+    plan: free
+    region: ohio
+    branch: main
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_BROWSER_KEY
+        sync: false
+      - key: GOOGLE_MAP_ID
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
