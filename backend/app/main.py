@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import db, sessions
 from .config import CORS_ORIGINS
-from .routers import compare, geo, recommend, schools, sessions as sessions_router
+from .routers import geo, recommend, schools, sessions as sessions_router
 
 
 @asynccontextmanager
@@ -30,7 +30,6 @@ app.include_router(schools.router)
 app.include_router(geo.router)
 app.include_router(recommend.router)
 app.include_router(sessions_router.router)
-app.include_router(compare.router)
 
 
 @app.get("/api/health")

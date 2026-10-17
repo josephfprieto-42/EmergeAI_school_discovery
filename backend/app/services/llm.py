@@ -558,12 +558,12 @@ Rules:
 - eligibility and admission_note on a program are catalog rules, not a determination that a particular child qualifies. Magnet admission is an application and random selection; living in the attendance boundary does not admit the student. Choice programs give in-boundary students priority for remaining seats, and transportation is typically not provided.
 - assigned_zones, when present, means the home point falls inside that school's published attendance polygon for the listed level and grades. Absence of assigned_zones means this address is not inside a stored boundary for that school, not that the district has no boundary.
 - religious, denomination, nonprofit, accreditation, and scholarship_programs come from the school's own annual Florida private-school survey. Say "school-reported" and cite directory_survey_year. A scholarship participation flag is not a tuition amount and does not mean a seat is available. directory_outdated true means the survey year is 2023 or earlier; do not treat those facts as current.
-- Hours of operation for licensed child care, bell times, and bus routes are not in this data.
 - academics, when present, is Civil Rights Data Collection 2021-22 enrollment: ap_enrollment, ap_math, ap_science, ap_compsci, ap_language, ib_enrollment, gifted_enrollment. A number is students enrolled, not a promise about the current year. Null means that count was not reported. Do not say a school "does not offer" AP or gifted when the count is null.
 - sports, when present, are FHSAA interscholastic teams (sport and team, such as Boys or Girls) for member high schools. Cite only sports in that list. If sports is absent and the school serves grade 9 or above, say it is not in the FHSAA directory. For elementary and middle schools, say FHSAA covers high-school sports only. Clubs, and sports outside that directory, are not in the data.
 - Mention real tradeoffs (farther away, lower grade, larger size, no state data, etc.).
 - Keep each 'why' to 1-2 sentences and each 'tradeoffs' to one sentence.
-- The first candidate is the top pick. Name it first in the summary; do not promote another school to "top pick".
+- Each candidate has a pin number, 1 through N, in the order given. Those numbers are the map pins. Pin 1 is the top pick. Do not promote another school ahead of it.
+- The summary must name every pin by its number and school name, in that order, in one short conversational paragraph. Do not skip a pin or change the order. Use only facts in the JSON.
 
 Conversation control (the payload carries these; follow them exactly):
 - known: topics the parent has already covered. Never ask about them and never restate them as questions.
@@ -573,13 +573,10 @@ Conversation control (the payload carries these; follow them exactly):
 
 Return ONLY JSON:
 {
-  "summary": string,                // 2-3 sentences addressed to the parent, summarizing what you looked for and the top pick
+  "summary": string,                // a short paragraph that names map pins 1 through N in order
   "follow_up": string|null,         // see ask_about
   "explanations": [ {"school_id": int, "why": string, "tradeoffs": string} ]  // one per candidate, same order
 }"""
-
-COMPARE_SYSTEM = """You are a Miami-Dade school counselor. Compare the given schools side by side for a parent using ONLY the JSON data provided (verified public data). Never invent facts; say 'not reported' for nulls.
-Return ONLY JSON: {"summary": string (3-4 sentences), "tradeoffs": [string, ...] (3-6 concise bullet-style sentences, each naming the schools involved)}"""
 
 
 def _compact(s: dict[str, Any]) -> dict[str, Any]:
@@ -720,11 +717,15 @@ def _fallback_explain(
         if "small_school" in prefs.priorities and (s.get("enrollment") or 0) > 800:
             trade.append("larger than a typical small school")
         exps.append(SchoolExplanation(school_id=s["id"], why=why, tradeoffs="; ".join(trade).capitalize() + "." if trade else "No major tradeoffs found in the available data."))
-    top = schools[0]["name"] if schools else "no schools"
     summary = ""
     if changes:
         summary = "Got it: " + "; ".join(c[0].lower() + c[1:] for c in changes) + ". "
-    summary += f"I filtered Miami-Dade providers by your criteria and ranked {len(schools)} using distance, Florida DOE results, size, and program signals. {top} ranks first."
+    pins = "; ".join(f"pin {i} is {s['name']}" for i, s in enumerate(schools, start=1))
+    summary += (
+        f"I filtered Miami-Dade providers by your criteria using distance, Florida DOE results, size, and program signals. On the map, {pins}."
+        if pins
+        else "I filtered Miami-Dade providers by your criteria, and none matched."
+    )
     if stage == "preliminary":
         summary += " " + discovery.preliminary_note(prefs, household, origin)
     if "affordability" in prefs.priorities:
@@ -755,7 +756,7 @@ def explain(
         return s, f, e, False
     payload: dict[str, Any] = {
         "preferences": prefs.model_dump(exclude_none=True),
-        "candidates": [_compact(s) for s in schools],
+        "candidates": [{"pin": i, **_compact(s)} for i, s in enumerate(schools, start=1)],
         "stage": stage,
         "known": sorted(known or []),
         "changes": list(changes or []),
@@ -793,58 +794,3 @@ def explain(
     except Exception:  # noqa: BLE001
         s, f, e = _fallback_explain(prefs, schools, household, work_label, changes, question, stage, origin)
         return s, f, e, False
-
-
-def _fallback_compare(schools: list[dict[str, Any]]) -> tuple[str, list[str]]:
-    names = [s["name"] for s in schools]
-    trade: list[str] = []
-    graded = [s for s in schools if s.get("fl_grade")]
-    if graded:
-        best = max(graded, key=lambda s: FL_ORDER.get(s["fl_grade"], 0))
-        if len({s["fl_grade"] for s in graded}) == 1:
-            trade.append(f"All graded schools ({', '.join(s['name'] for s in graded)}) hold a Florida DOE grade of {best['fl_grade']}.")
-        else:
-            trade.append(f"{best['name']} has the strongest Florida DOE grade ({best['fl_grade']}); " + ", ".join(f"{s['name']} is {s['fl_grade']}" for s in graded if s is not best) + ".")
-    ungraded = [s["name"] for s in schools if not s.get("fl_grade")]
-    if ungraded:
-        trade.append(", ".join(ungraded) + (" has" if len(ungraded) == 1 else " have") + " no state grade or test data published (private/early-childhood providers are not graded).")
-    dists = [s for s in schools if s.get("distance_miles") is not None]
-    if dists:
-        near = min(dists, key=lambda s: s["distance_miles"])
-        far = max(dists, key=lambda s: s["distance_miles"])
-        if near is not far:
-            trade.append(f"{near['name']} is closest at {near['distance_miles']:.1f} mi; {far['name']} is farthest at {far['distance_miles']:.1f} mi.")
-    enr = [s for s in schools if s.get("enrollment")]
-    if len(enr) > 1:
-        sm = min(enr, key=lambda s: s["enrollment"])
-        lg = max(enr, key=lambda s: s["enrollment"])
-        trade.append(f"{sm['name']} is the smallest ({sm['enrollment']:,} students) and {lg['name']} the largest ({lg['enrollment']:,}).")
-    ratios = [s for s in schools if s.get("student_teacher_ratio")]
-    if len(ratios) > 1:
-        lo = min(ratios, key=lambda s: s["student_teacher_ratio"])
-        trade.append(f"{lo['name']} has the lowest student-teacher ratio ({lo['student_teacher_ratio']:.0f}:1).")
-    summary = f"Comparing {', '.join(names[:-1])} and {names[-1]} using verified public data. " + (trade[0] if trade else "")
-    return summary, trade
-
-
-FL_ORDER = {"A": 5, "B": 4, "C": 3, "D": 2, "F": 1}
-
-
-def compare(prefs: Optional[Preferences], schools: list[dict[str, Any]]) -> tuple[str, list[str], bool]:
-    client = _get_client()
-    if not client:
-        s, t = _fallback_compare(schools)
-        return s, t, False
-    payload = {"preferences": prefs.model_dump(exclude_none=True) if prefs else None, "schools": [_compact(s) for s in schools]}
-    try:
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[{"role": "system", "content": COMPARE_SYSTEM}, {"role": "user", "content": json.dumps(payload)}],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-        )
-        data = json.loads(resp.choices[0].message.content or "{}")
-        return data.get("summary") or "", [str(t) for t in data.get("tradeoffs", [])], True
-    except Exception:  # noqa: BLE001
-        s, t = _fallback_compare(schools)
-        return s, t, False

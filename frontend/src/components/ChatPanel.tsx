@@ -5,7 +5,6 @@ import { CATEGORY_META, gradeLabel, PRIORITY_LABEL } from '../lib/format'
 import { useStore } from '../store'
 import type { Child, Household, Question } from '../types'
 import { useIsTouch } from '../hooks/useMediaQuery'
-import { SchoolCard } from './SchoolList'
 import { Spinner } from './ui'
 
 const SUGGESTIONS = [
@@ -27,10 +26,14 @@ function householdEmpty(h: Household | null): boolean {
 }
 
 export function ChatPanel({ onComposerFocus }: { onComposerFocus?: () => void } = {}) {
-  const { chat, chatLoading, chatHydrated, sendChat, resetChat, recommendation, prefs, config, household, work, forgetHousehold } = useStore()
+  const { chat, chatLoading, chatHydrated, sendChat, resetChat, recommendation, prefs, config, household, work, forgetHousehold, origin } = useStore()
   const [text, setText] = useState('')
+  const [keptOrigin, setKeptOrigin] = useState<string | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const isTouch = useIsTouch()
+  const originKey = origin ? `${origin.lat.toFixed(5)},${origin.lng.toFixed(5)}` : null
+  const keepingLocation = originKey != null && keptOrigin === originKey
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -43,18 +46,35 @@ export function ChatPanel({ onComposerFocus }: { onComposerFocus?: () => void } 
     void sendChat(m)
   }
 
-  const expl = new globalThis.Map(recommendation?.explanations.map((e) => [e.school_id, e]) ?? [])
-
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="scrollbar-thin min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-        {chat.length === 0 && (
+        {chat.length === 0 && origin && !keepingLocation && (
+          <div className="rounded-2xl border border-brand-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start gap-2 text-sm leading-relaxed text-slate-800">
+              <MessageCircleQuestion className="mt-0.5 size-4 shrink-0 text-accent" />
+              <span>Search near {origin.label}, the place from Explore, or tell me a different one.</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => setKeptOrigin(originKey)} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-slate-900">
+                Use this location
+              </button>
+              <button type="button" onClick={() => inputRef.current?.focus()} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-slate-900">
+                Different place
+              </button>
+            </div>
+          </div>
+        )}
+
+        {chat.length === 0 && (!origin || keepingLocation) && (
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
               <Sparkles className="size-4 text-accent" /> Describe what you're looking for
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Tell me where you live, your child's age or grade, and what matters most. I'll filter and rank real Miami-Dade providers using verified public data, then explain the tradeoffs.
+              {keepingLocation
+                ? `I'll search near ${origin?.label}. Tell me your child's age or grade, and what matters most. I'll mark the best matches on the map.`
+                : "Tell me a neighborhood, ZIP, or address, your child's age or grade, and what matters most. I'll mark the best matches on the map."}
             </p>
             {household && !householdEmpty(household) && (
               <div className="mt-3 rounded-xl bg-slate-50 py-2">
@@ -130,37 +150,11 @@ export function ChatPanel({ onComposerFocus }: { onComposerFocus?: () => void } 
               </div>
             )}
             <HouseholdTags household={household} workLabel={work?.label} onForget={forgetHousehold} />
-            {recommendation.stage !== 'discovering' && (
-              <>
-                {recommendation.stage === 'preliminary' && prefs && (
-                  <div className="mx-1 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
-                    First matches based on {preliminaryBasis(prefs, recommendation.origin_label)}. {preliminaryMissing(prefs, recommendation.origin_label)}
-                  </div>
-                )}
-                <div className="px-1 text-[11px] text-slate-400">
-                  {recommendation.groups?.length
-                    ? `Separate lists · ${recommendation.llm_used ? 'AI explanations grounded in public data' : 'deterministic ranking'}`
-                    : `Ranked ${recommendation.results.length} of ${recommendation.candidates_considered} matching providers · ${recommendation.llm_used ? 'AI explanations grounded in public data' : 'deterministic ranking'}`}
-                </div>
-              </>
+            {recommendation.stage === 'preliminary' && prefs && (
+              <div className="mx-1 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+                First matches based on {preliminaryBasis(prefs, recommendation.origin_label)}. {preliminaryMissing(prefs, recommendation.origin_label)}
+              </div>
             )}
-            {recommendation.stage === 'discovering' ? null : recommendation.groups?.length
-              ? recommendation.groups.map((g) => (
-                  <section key={g.grade} className="space-y-2">
-                    <div className="px-1 pt-1 text-xs font-semibold text-slate-700">
-                      {childLabel(g)}
-                      <span className="ml-2 font-normal text-slate-400">
-                        Ranked {g.results.length} of {g.candidates_considered}
-                      </span>
-                    </div>
-                    {g.results.map((s, i) => (
-                      <SchoolCard key={`${g.grade}-${s.id}`} school={s} rank={i + 1} why={expl.get(s.id)?.why} />
-                    ))}
-                  </section>
-                ))
-              : recommendation.results.map((s, i) => (
-                  <SchoolCard key={s.id} school={s} rank={i + 1} why={expl.get(s.id)?.why} />
-                ))}
           </div>
         )}
         <div ref={endRef} />
@@ -174,6 +168,7 @@ export function ChatPanel({ onComposerFocus }: { onComposerFocus?: () => void } 
         className="mt-3 flex items-end gap-2"
       >
         <textarea
+          ref={inputRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -186,11 +181,13 @@ export function ChatPanel({ onComposerFocus }: { onComposerFocus?: () => void } 
           onFocus={onComposerFocus}
           rows={2}
           placeholder={
-            !chat.length
-              ? 'e.g. "3rd grader near Brickell, strong math, small classes"'
-              : recommendation?.question && recommendation.stage !== 'refined'
-                ? 'Answer here, or tell me anything else that matters…'
-                : 'Refine: "closer", "only A schools", "add private options"…'
+            !chat.length && origin && !keepingLocation
+              ? 'Or name a different neighborhood, ZIP, or address…'
+              : !chat.length
+                ? 'e.g. "3rd grader near Brickell, strong math, small classes"'
+                : recommendation?.question && recommendation.stage !== 'refined'
+                  ? 'Answer here, or tell me anything else that matters…'
+                  : 'Refine: "closer", "only A schools", "add private options"…'
           }
           className="flex-1 resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-base shadow-sm outline-none ring-accent/40 placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 md:text-sm"
         />

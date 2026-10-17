@@ -1,10 +1,9 @@
 import { create } from 'zustand'
 import { api } from './api'
-import type { AppConfig, Category, ChatMessage, CompareResponse, Household, Origin, Preferences, RecommendResponse, School } from './types'
+import type { AppConfig, Category, ChatMessage, Household, Origin, Preferences, RecommendResponse, School } from './types'
 
 const SESSION_KEY = 'schoolmatch.sessionId'
 const HOUSEHOLD_KEY = 'schoolmatch.householdId'
-const FAVORITES_KEY = 'schoolmatch.favorites'
 const DEFAULT_RADIUS_MILES = 5
 const OUTSIDE_COUNTY = 'Could not locate that place in Miami-Dade County'
 
@@ -16,15 +15,6 @@ function outsideCounty(lat: number, lng: number, config: AppConfig | null): bool
 
 function samePoint(origin: Origin, lat: number, lng: number): boolean {
   return Math.abs(origin.lat - lat) < 1e-5 && Math.abs(origin.lng - lng) < 1e-5
-}
-
-function loadFavoriteIds(): number[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]')
-    return Array.isArray(raw) ? raw.filter((id): id is number => typeof id === 'number') : []
-  } catch {
-    return []
-  }
 }
 
 export type PanelMode = 'explore' | 'match'
@@ -70,18 +60,6 @@ interface State {
   select: (id: number | null) => Promise<void>
   hoverId: number | null
   setHover: (id: number | null) => void
-
-  favoriteIds: number[]
-  toggleFavorite: (id: number) => void
-
-  compareIds: number[]
-  toggleCompare: (id: number) => void
-  clearCompare: () => void
-  compareOpen: boolean
-  setCompareOpen: (v: boolean) => void
-  compareResult: CompareResponse | null
-  compareLoading: boolean
-  runCompare: () => Promise<void>
 
   chat: ChatMessage[]
   chatLoading: boolean
@@ -239,41 +217,6 @@ export const useStore = create<State>((set, get) => ({
   hoverId: null,
   setHover: (hoverId) => set({ hoverId }),
 
-  favoriteIds: loadFavoriteIds(),
-  toggleFavorite: (id) =>
-    set((s) => {
-      const favoriteIds = s.favoriteIds.includes(id) ? s.favoriteIds.filter((x) => x !== id) : [...s.favoriteIds, id]
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoriteIds))
-      return { favoriteIds }
-    }),
-
-  compareIds: [],
-  toggleCompare: (id) =>
-    set((s) => {
-      if (s.compareIds.includes(id)) return { compareIds: s.compareIds.filter((x) => x !== id), compareResult: null }
-      if (s.compareIds.length >= 4) return {}
-      return { compareIds: [...s.compareIds, id], compareResult: null }
-    }),
-  clearCompare: () => set({ compareIds: [], compareResult: null, compareOpen: false }),
-  compareOpen: false,
-  setCompareOpen: (compareOpen) => {
-    set({ compareOpen })
-    if (compareOpen && !get().compareResult) void get().runCompare()
-  },
-  compareResult: null,
-  compareLoading: false,
-  runCompare: async () => {
-    const { compareIds, origin, prefs } = get()
-    if (compareIds.length < 2) return
-    set({ compareLoading: true })
-    try {
-      const r = await api.compare({ ids: compareIds, origin: origin ? [origin.lat, origin.lng] : null, preferences: prefs })
-      set({ compareResult: r, compareLoading: false })
-    } catch {
-      set({ compareLoading: false })
-    }
-  },
-
   chat: [],
   chatLoading: false,
   chatHydrated: false,
@@ -354,7 +297,7 @@ export const useStore = create<State>((set, get) => ({
         radius_miles: filters.radius,
         remember_location: rememberLocation,
         household_id: householdId,
-        limit: 6,
+        limit: 5,
       })
       localStorage.setItem(SESSION_KEY, r.session_id)
       if (r.household_id) localStorage.setItem(HOUSEHOLD_KEY, r.household_id)

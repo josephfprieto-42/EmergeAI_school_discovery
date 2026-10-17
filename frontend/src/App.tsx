@@ -1,15 +1,13 @@
 import { APIProvider } from '@vis.gl/react-google-maps'
 import clsx from 'clsx'
-import { ChevronDown, Compass, School, Sparkles } from 'lucide-react'
+import { Compass, School, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { BottomSheet, type SheetSnap } from './components/BottomSheet'
 import { ChatPanel } from './components/ChatPanel'
-import { CompareModal, CompareTray } from './components/Compare'
 import { LocationPicker } from './components/LocationPicker'
 import { MapView } from './components/MapView'
 import { FilterBar } from './components/FilterBar'
 import { SchoolDetail } from './components/SchoolDetail'
-import { SchoolList } from './components/SchoolList'
 import { useIsDesktop } from './hooks/useMediaQuery'
 import { CATEGORY_META } from './lib/format'
 import { useStore } from './store'
@@ -38,7 +36,6 @@ function Shell() {
     <div className="flex h-full flex-col bg-white pt-[env(safe-area-inset-top)]">
       <Header />
       <MapStage />
-      <CompareModal />
     </div>
   )
 }
@@ -72,14 +69,11 @@ function Header() {
 }
 
 const PEEK = 108
-const PEEK_WITH_TRAY = 164
 
 function MapStage() {
   const isDesktop = useIsDesktop()
-  const { mode, selected, selectedId, select, compareIds, chat, setMapInsetBottom } = useStore()
-  const [resultsOpen, setResultsOpen] = useState(false)
+  const { mode, selected, selectedId, select, chat, setMapInsetBottom } = useStore()
   const [chatSnap, setChatSnap] = useState<SheetSnap>('half')
-  const [resultsSnap, setResultsSnap] = useState<SheetSnap>('half')
   const [detailSnap, setDetailSnap] = useState<SheetSnap>('half')
 
   const [tracked, setTracked] = useState({ mode, chatLen: chat.length })
@@ -94,30 +88,23 @@ function MapStage() {
     if (selectedId != null) setDetailSnap('half')
   }
 
-  const showResultsSheet = !isDesktop && mode === 'explore' && resultsOpen
   const showChatSheet = !isDesktop && mode === 'match'
   const showDetailSheet = !isDesktop && !!selected
-  const floatCompare = compareIds.length > 0 && !showResultsSheet && !showChatSheet
 
   useEffect(() => {
-    if (isDesktop || (!showResultsSheet && !showChatSheet && !showDetailSheet)) setMapInsetBottom(0)
-  }, [isDesktop, showResultsSheet, showChatSheet, showDetailSheet, setMapInsetBottom])
+    if (isDesktop || (!showChatSheet && !showDetailSheet)) setMapInsetBottom(0)
+  }, [isDesktop, showChatSheet, showDetailSheet, setMapInsetBottom])
 
   return (
     <main className="relative min-h-0 flex-1 overflow-clip">
       <MapView />
 
       {mode === 'explore' ? (
-        <ExploreOverlay resultsOpen={resultsOpen} onToggleResults={() => setResultsOpen((open) => !open)} showList={isDesktop} />
+        <ExploreOverlay />
       ) : (
         isDesktop && (
-          <div className="absolute bottom-3 left-3 top-3 z-10 flex w-[400px] flex-col overflow-hidden rounded-2xl border border-brand-100 bg-brand-50 shadow-xl">
-            <div className="shrink-0 border-b border-slate-200 p-3">
-              <LocationPicker />
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col p-3">
-              <ChatPanel />
-            </div>
+          <div className="absolute bottom-3 left-3 top-3 z-10 flex w-[400px] flex-col overflow-hidden rounded-2xl border border-brand-100 bg-brand-50 p-3 shadow-xl">
+            <ChatPanel />
           </div>
         )
       )}
@@ -128,45 +115,21 @@ function MapStage() {
         </div>
       )}
 
-      {floatCompare && (
-        <div className="pointer-events-none absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 flex justify-center">
-          <CompareTray />
-        </div>
-      )}
-
       {isDesktop && <Legend selectedOpen={!!selected} />}
 
       {showChatSheet && (
         <BottomSheet
           snap={chatSnap}
           onSnapChange={setChatSnap}
-          peekHeight={compareIds.length ? PEEK_WITH_TRAY : PEEK}
-          header={compareIds.length ? <CompareTray /> : undefined}
+          peekHeight={PEEK}
           onHeightChange={setMapInsetBottom}
           label="Find my match"
         >
-          <div className="shrink-0 border-b border-slate-200 px-3 pb-3">
-            <LocationPicker />
-          </div>
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-3">
             <div className="h-full">
               <ChatPanel onComposerFocus={() => setChatSnap('full')} />
             </div>
           </div>
-        </BottomSheet>
-      )}
-
-      {showResultsSheet && (
-        <BottomSheet
-          snap={resultsSnap}
-          onSnapChange={setResultsSnap}
-          peekHeight={compareIds.length ? PEEK_WITH_TRAY : PEEK}
-          header={compareIds.length ? <CompareTray /> : undefined}
-          onHeightChange={setMapInsetBottom}
-          onDismiss={() => setResultsOpen(false)}
-          label="School results"
-        >
-          <SchoolList />
         </BottomSheet>
       )}
 
@@ -179,27 +142,16 @@ function MapStage() {
   )
 }
 
-function ExploreOverlay({ resultsOpen, onToggleResults, showList }: { resultsOpen: boolean; onToggleResults: () => void; showList: boolean }) {
-  const { schools, schoolsLoading } = useStore()
-  const count = schoolsLoading ? 'Loading schools' : `${schools.length.toLocaleString()} schools`
+function ExploreOverlay() {
   return (
-    <div className={clsx('pointer-events-none absolute left-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] w-[min(100%-1.5rem,400px)] flex-col', showList && resultsOpen && 'bottom-3')}>
-      <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-brand-100 bg-brand-50 shadow-xl">
+    <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] w-[min(100%-1.5rem,400px)] flex-col">
+      <div className="pointer-events-auto flex min-h-0 flex-col overflow-hidden rounded-2xl border border-brand-100 bg-brand-50 shadow-xl">
         <div className="shrink-0 border-b border-slate-200 p-3">
           <LocationPicker />
         </div>
-        <div className={clsx('scrollbar-thin shrink-0 overflow-y-auto p-3', resultsOpen ? 'max-h-[38%]' : 'max-h-[min(46vh,420px)]')}>
+        <div className="scrollbar-thin max-h-[min(46vh,420px)] overflow-y-auto p-3">
           <FilterBar />
         </div>
-        <button type="button" aria-expanded={resultsOpen} onClick={onToggleResults} className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-white/60">
-          <span>{count}</span>
-          <ChevronDown className={clsx('size-4 shrink-0 text-slate-400 transition', resultsOpen && 'rotate-180')} />
-        </button>
-        {showList && resultsOpen && (
-          <div className="flex min-h-0 flex-1 flex-col border-t border-slate-200 bg-white">
-            <SchoolList />
-          </div>
-        )}
       </div>
     </div>
   )

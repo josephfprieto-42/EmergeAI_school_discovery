@@ -131,6 +131,7 @@ def recommend(req: RecommendRequest, con=Depends(get_con), sessions_con=Depends(
             activity_points=activity_points,
         )
         question = discovery.next_question(prefs, household, origin, asked, results)
+        results = results[:5]
         summary, follow_up, explanations, used_llm_explain = llm.explain(
             prefs,
             results,

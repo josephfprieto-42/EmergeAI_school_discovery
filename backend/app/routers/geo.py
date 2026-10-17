@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from ..config import GOOGLE_GEOCODING_KEY, GOOGLE_MAP_ID, GOOGLE_MAPS_BROWSER_KEY, MIAMI_BOUNDS, MIAMI_CENTER, OPENAI_API_KEY
 from ..services.geocode import geocode
+from ..services.map_bounds import dataset_map_bounds
 
 router = APIRouter(prefix="/api", tags=["geo"])
 
@@ -22,6 +23,7 @@ def config():
             "north": MIAMI_BOUNDS[2],
             "east": MIAMI_BOUNDS[3],
         },
+        "map_bounds": dataset_map_bounds(),
         "features": {
             "llm": bool(OPENAI_API_KEY),
             "google_geocoding": bool(GOOGLE_GEOCODING_KEY),

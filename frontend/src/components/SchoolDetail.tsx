@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ExternalLink, GitCompareArrows, Heart, Phone, Sparkles, X } from 'lucide-react'
+import { ExternalLink, Phone, Sparkles, X } from 'lucide-react'
 import { CATEGORY_META, fmtNum, fmtPct, gradeSpan, SUBTYPE_LABEL } from '../lib/format'
 import { useStore } from '../store'
 import { CategoryPill, GradeBadge, Stat } from './ui'
@@ -9,11 +9,9 @@ import { CategoryPill, GradeBadge, Stat } from './ui'
  * already provides the rounded corners and shadow.
  */
 export function SchoolDetail({ variant = 'card' }: { variant?: 'card' | 'sheet' }) {
-  const { selected, select, compareIds, toggleCompare, recommendation, favoriteIds, toggleFavorite, setMode, sendChat, chatLoading } = useStore()
+  const { selected, select, recommendation, setMode, sendChat, chatLoading } = useStore()
   if (!selected) return null
   const s = selected
-  const inCompare = compareIds.includes(s.id)
-  const saved = favoriteIds.includes(s.id)
 
   function askAi() {
     if (chatLoading) return
@@ -141,10 +139,16 @@ export function SchoolDetail({ variant = 'card' }: { variant?: 'card' | 'sheet' 
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
                         {program.kind === 'magnet' ? 'Magnet' : 'Choice'}
                       </span>
-                      {program.test_required && <span className="text-[10px] text-slate-400">Test or audition required</span>}
+                      {program.test_required && <span className="text-[10px] text-slate-400">Test required</span>}
+                      {program.audition_required && <span className="text-[10px] text-slate-400">Audition required</span>}
                     </li>
                   ))}
                 </ul>
+                {s.programs.some((program) => program.admission_note) && (
+                  <p className="mt-2 text-[11px] leading-snug text-slate-500">
+                    {[...new Set(s.programs.map((program) => program.admission_note).filter(Boolean))].join(' ')}
+                  </p>
+                )}
               </div>
             )}
             {s.academics && (
@@ -181,6 +185,39 @@ export function SchoolDetail({ variant = 'card' }: { variant?: 'card' | 'sheet' 
           </section>
         ) : null}
 
+        {(s.assigned_zones?.length || s.attendance_levels?.length) ? (
+          <section>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Attendance boundary</h3>
+            {s.assigned_zones && s.assigned_zones.length > 0 ? (
+              <p className="text-sm text-slate-700">
+                This address is inside the published {s.assigned_zones.map((zone) => zone.level).join(' and ')} attendance area
+                {s.assigned_zones[0].grade_low != null ? ` (grades ${s.assigned_zones[0].grade_low}–${s.assigned_zones[0].grade_high})` : ''}.
+                Boundary residence is not the same as admission to a magnet or choice program.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500">
+                This campus has a published {s.attendance_levels?.join(' and ')} attendance area. Set a home location to see whether an address falls inside it.
+              </p>
+            )}
+          </section>
+        ) : null}
+
+        {(s.religious != null || s.scholarship_programs?.length || s.accreditation || s.directory_survey_year) && (
+          <section>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Florida private-school survey</h3>
+            <p className="mb-2 text-[11px] text-slate-400">
+              School-reported{s.directory_survey_year ? `, survey year ${s.directory_survey_year}` : ''}. The Department of Education does not verify these answers. Scholarship participation is not a tuition amount.
+            </p>
+            <div className="space-y-1 text-sm text-slate-700">
+              {s.religious === true && <div>Religious{s.denomination ? `: ${s.denomination}` : ''}</div>}
+              {s.religious === false && <div>Reported as not religious</div>}
+              {s.nonprofit != null && <div>{s.nonprofit ? 'Nonprofit' : 'Not reported as nonprofit'}</div>}
+              {s.accreditation && <div>Accreditation: {s.accreditation}</div>}
+              {s.scholarship_programs && s.scholarship_programs.length > 0 && <div>Participates in {s.scholarship_programs.join(', ')}</div>}
+            </div>
+          </section>
+        )}
+
         {!graded && (
           <p className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
             Florida does not publish school grades or test results for {s.category === 'private' ? 'private schools' : 'early childhood providers'}. Information shown comes from Miami-Dade County's public directory.
@@ -192,39 +229,18 @@ export function SchoolDetail({ variant = 'card' }: { variant?: 'card' | 'sheet' 
           {graded ? ', Florida DOE School Grades 2025-26, NCES Common Core of Data' : ''}
           {s.programs?.length ? ', M-DCPS magnet and choice catalog' : ''}
           {s.academics ? ', CRDC 2021-22' : ''}
-          {s.sports?.length ? ', FHSAA' : ''}.
+          {s.sports?.length ? ', FHSAA' : ''}
+          {s.attendance_levels?.length ? ', M-DCPS attendance boundaries' : ''}
+          {s.directory_survey_year ? ', Florida private-school directory' : ''}.
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 border-t border-slate-100 p-3">
-        <button
-          type="button"
-          onClick={() => toggleFavorite(s.id)}
-          className={clsx(
-            'inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium transition',
-            saved ? 'bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-          )}
-        >
-          <Heart className={clsx('size-3.5', saved && 'fill-current')} />
-          {saved ? 'Saved' : 'Save'}
-        </button>
-        <button
-          type="button"
-          onClick={() => toggleCompare(s.id)}
-          disabled={!inCompare && compareIds.length >= 4}
-          className={clsx(
-            'inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium transition disabled:opacity-40',
-            inCompare ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800',
-          )}
-        >
-          <GitCompareArrows className="size-3.5" />
-          {inCompare ? 'Added' : 'Compare'}
-        </button>
+      <div className="border-t border-slate-100 p-3">
         <button
           type="button"
           onClick={askAi}
           disabled={chatLoading}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-2 py-2 text-xs font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-2 py-2 text-xs font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
         >
           <Sparkles className="size-3.5" />
           Ask AI

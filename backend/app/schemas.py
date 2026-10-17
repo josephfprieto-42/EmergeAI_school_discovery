@@ -270,15 +270,3 @@ class HouseholdState(BaseModel):
     work: Optional[tuple[float, float]] = None
     work_label: Optional[str] = None
 
-
-class CompareRequest(BaseModel):
-    ids: list[int] = Field(..., min_length=2, max_length=4)
-    origin: Optional[tuple[float, float]] = None
-    preferences: Optional[Preferences] = None
-
-
-class CompareResponse(BaseModel):
-    schools: list[dict[str, Any]]
-    summary: str
-    tradeoffs: list[str]
-    llm_used: bool

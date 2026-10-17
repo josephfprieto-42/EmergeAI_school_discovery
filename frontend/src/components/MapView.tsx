@@ -9,23 +9,33 @@ import type { School } from '../types'
 const MIAMI = { lat: 25.76, lng: -80.3 }
 const BRAND_BLUE = CATEGORY_META.public.color
 
-function markerContent(s: School, rank: number | null, state: 'normal' | 'selected' | 'hover'): HTMLElement {
+function bindMarkerHover(el: HTMLElement, id: number, setHover: (id: number | null) => void) {
+  el.addEventListener('mouseenter', () => setHover(id))
+  el.addEventListener('mouseleave', () => setHover(null))
+}
+
+/** White ring thickness. The colored center stays put; selection only adds white. */
+function ringWidth(state: 'normal' | 'selected' | 'hover'): number {
+  if (state === 'selected') return 7
+  if (state === 'hover') return 3
+  return 2
+}
+
+function markerContent(s: School, rank: number | null, state: 'normal' | 'selected' | 'hover', muted = false): HTMLElement {
   const el = document.createElement('div')
   const color = CATEGORY_META[s.category].color
-  el.style.color = color
-  el.style.position = 'relative'
   el.style.cursor = 'pointer'
   el.title = s.name
+  const ring = ringWidth(state)
   if (rank != null) {
-    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9999px 9999px 9999px 0;transform:rotate(-45deg);background:${color};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.35)"><span style="transform:rotate(45deg);color:white;font:700 12px/1 Inter,system-ui,sans-serif">${rank}</span></div>`
+    // Border sits inside the box, so grow the pin with the ring to keep the colored shape.
+    const size = 24 + ring * 2
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:9999px 9999px 9999px 0;transform:rotate(-45deg);background:${color};border:${ring}px solid white;box-sizing:border-box;box-shadow:0 2px 6px rgba(0,0,0,.35)"><span style="transform:rotate(45deg);color:white;font:700 12px/1 Inter,system-ui,sans-serif">${rank}</span></div>`
     el.style.transform = 'translateY(-6px)'
   } else {
-    const size = state === 'normal' ? 10 : 14
-    el.innerHTML = `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`
-  }
-  if (state !== 'normal') {
-    el.classList.add('marker-pulse')
-    el.style.zIndex = '10'
+    const dot = muted && state === 'normal' ? 6 : 14
+    const opacity = muted && state === 'normal' ? 0.35 : 1
+    el.innerHTML = `<div style="padding:${ring}px;border-radius:9999px;background:white;box-shadow:0 1px 3px rgba(0,0,0,.4);opacity:${opacity};line-height:0"><div style="width:${dot}px;height:${dot}px;border-radius:9999px;background:${color}"></div></div>`
   }
   return el
 }
@@ -33,16 +43,19 @@ function markerContent(s: School, rank: number | null, state: 'normal' | 'select
 function Markers() {
   const map = useMap()
   const markerLib = useMapsLibrary('marker')
-  const { schools, recommendation, selectedId, hoverId, select, setHover } = useStore()
+  const { schools, recommendation, selectedId, hoverId, select, setHover, mode } = useStore()
   const clustererRef = useRef<MarkerClusterer | null>(null)
   const markersRef = useRef<globalThis.Map<number, google.maps.marker.AdvancedMarkerElement>>(new globalThis.Map())
   const pinnedRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([])
+  const pinnedByIdRef = useRef<globalThis.Map<number, google.maps.marker.AdvancedMarkerElement>>(new globalThis.Map())
 
+  const picks = useMemo(() => (recommendation?.results ?? []).slice(0, 5), [recommendation])
   const rankById = useMemo(() => {
     const m = new globalThis.Map<number, number>()
-    recommendation?.results.forEach((r, i) => m.set(r.id, i + 1))
+    picks.forEach((r, i) => m.set(r.id, i + 1))
     return m
-  }, [recommendation])
+  }, [picks])
+  const muteOthers = mode === 'match' && rankById.size > 0
 
   // Clustered background markers for every school matching the filters.
   useEffect(() => {
@@ -53,11 +66,14 @@ function Markers() {
     const markers: google.maps.marker.AdvancedMarkerElement[] = []
     for (const s of schools) {
       if (rankById.has(s.id)) continue
-      const m = new AdvancedMarkerElement({ position: { lat: s.lat, lng: s.lon }, content: markerContent(s, null, 'normal') })
+      const m = new AdvancedMarkerElement({
+        position: { lat: s.lat, lng: s.lon },
+        content: markerContent(s, null, 'normal', muteOthers),
+        anchorLeft: '-50%',
+        anchorTop: '-50%',
+      })
       m.addListener('click', () => void select(s.id))
-      const content = m.content as HTMLElement
-      content.addEventListener('mouseenter', () => setHover(s.id))
-      content.addEventListener('mouseleave', () => setHover(null))
+      bindMarkerHover(m.content as HTMLElement, s.id, setHover)
       markersRef.current.set(s.id, m)
       markers.push(m)
     }
@@ -79,7 +95,7 @@ function Markers() {
     return () => {
       clustererRef.current?.clearMarkers()
     }
-  }, [map, markerLib, schools, rankById, select, setHover])
+  }, [map, markerLib, schools, rankById, select, setHover, muteOthers])
 
   // Numbered pins for recommendation results (never clustered).
   useEffect(() => {
@@ -87,40 +103,52 @@ function Markers() {
     const { AdvancedMarkerElement } = markerLib
     pinnedRef.current.forEach((m) => (m.map = null))
     pinnedRef.current = []
-    for (const s of recommendation?.results ?? []) {
-      const m = new AdvancedMarkerElement({ map, position: { lat: s.lat, lng: s.lon }, content: markerContent(s, rankById.get(s.id) ?? null, 'normal'), zIndex: 5000 })
+    pinnedByIdRef.current.clear()
+    for (const s of picks) {
+      const rank = rankById.get(s.id) ?? null
+      const m = new AdvancedMarkerElement({ map, position: { lat: s.lat, lng: s.lon }, content: markerContent(s, rank, 'normal'), zIndex: 5000 })
       m.addListener('click', () => void select(s.id))
       pinnedRef.current.push(m)
+      pinnedByIdRef.current.set(s.id, m)
     }
     return () => {
       pinnedRef.current.forEach((m) => (m.map = null))
     }
-  }, [map, markerLib, recommendation, rankById, select])
+  }, [map, markerLib, picks, rankById, select])
 
-  // Selected / hover styling.
+  // Selected / hover styling. The colored dot stays the same size; only the white ring grows.
   useEffect(() => {
-    const ids = [selectedId, hoverId].filter((x): x is number => x != null)
-    const touched: google.maps.marker.AdvancedMarkerElement[] = []
+    const ids = [...new Set([selectedId, hoverId].filter((x): x is number => x != null))]
+    const touched: { marker: google.maps.marker.AdvancedMarkerElement; id: number; rank: number | null }[] = []
     for (const id of ids) {
-      const m = markersRef.current.get(id)
-      const s = schools.find((x) => x.id === id)
-      if (m && s) {
-        m.content = markerContent(s, null, id === selectedId ? 'selected' : 'hover')
-        m.zIndex = 4000
-        touched.push(m)
+      const state = id === selectedId ? 'selected' : 'hover'
+      const clustered = markersRef.current.get(id)
+      const school = schools.find((x) => x.id === id)
+      if (clustered && school) {
+        clustered.content = markerContent(school, null, state, false)
+        bindMarkerHover(clustered.content as HTMLElement, id, setHover)
+        clustered.zIndex = 4000
+        touched.push({ marker: clustered, id, rank: null })
+      }
+      const pinned = pinnedByIdRef.current.get(id)
+      const pick = picks.find((x) => x.id === id)
+      if (pinned && pick) {
+        const rank = rankById.get(id) ?? null
+        pinned.content = markerContent(pick, rank, state, false)
+        pinned.zIndex = 4000
+        touched.push({ marker: pinned, id, rank })
       }
     }
     return () => {
-      for (const m of touched) {
-        const id = [...markersRef.current.entries()].find(([, v]) => v === m)?.[0]
-        const s = schools.find((x) => x.id === id)
-        if (s) {
-          m.content = markerContent(s, null, 'normal')
-          m.zIndex = null
-        }
+      for (const t of touched) {
+        const school = (t.rank != null ? picks : schools).find((x) => x.id === t.id)
+        if (!school) continue
+        t.marker.content = markerContent(school, t.rank, 'normal', t.rank == null && muteOthers)
+        if (t.rank == null) bindMarkerHover(t.marker.content as HTMLElement, t.id, setHover)
+        t.marker.zIndex = t.rank != null ? 5000 : null
       }
     }
-  }, [selectedId, hoverId, schools])
+  }, [selectedId, hoverId, schools, picks, rankById, muteOthers, setHover])
 
   return null
 }
@@ -216,8 +244,9 @@ function HomeAndRadius() {
     if (!map || fitRequest === 0) return
     const b = new google.maps.LatLngBounds()
     let n = 0
-    if (recommendation?.results.length) {
-      recommendation.results.forEach((s) => {
+    const picks = recommendation?.results.slice(0, 5) ?? []
+    if (picks.length) {
+      picks.forEach((s) => {
         b.extend({ lat: s.lat, lng: s.lon })
         n++
       })
@@ -275,10 +304,16 @@ function HomeAndRadius() {
 
 function GoogleMapView({ mapId }: { mapId: string }) {
   const isDesktop = useIsDesktop()
+  const mapBounds = useStore((s) => s.config?.map_bounds)
+  const restriction = useMemo(
+    () => (mapBounds ? { latLngBounds: mapBounds, strictBounds: true } : undefined),
+    [mapBounds],
+  )
   return (
     <Map
       defaultCenter={MIAMI}
       defaultZoom={10}
+      restriction={restriction}
       mapId={mapId}
       gestureHandling="greedy"
       disableDefaultUI
@@ -297,19 +332,22 @@ function GoogleMapView({ mapId }: { mapId: string }) {
 // ----------------------------------------------------------------------------------
 // Fallback: a simple projected plot used only when no Google Maps key is configured.
 // ----------------------------------------------------------------------------------
-const FB = { s: 25.3, w: -80.65, n: 26.0, e: -80.08 }
+const FB_FALLBACK = { south: 25.3, west: -80.65, north: 26.0, east: -80.08 }
 
 function FallbackMap() {
-  const { schools, recommendation, selectedId, hoverId, select, setHover, origin, filters, work } = useStore()
+  const { schools, recommendation, selectedId, hoverId, select, setHover, origin, filters, work, mode } = useStore()
+  const FB = useStore((s) => s.config?.map_bounds) ?? FB_FALLBACK
   const W = 1000
-  const H = Math.round((W * (FB.n - FB.s)) / ((FB.e - FB.w) * Math.cos((25.7 * Math.PI) / 180)))
-  const px = (lon: number) => ((lon - FB.w) / (FB.e - FB.w)) * W
-  const py = (lat: number) => ((FB.n - lat) / (FB.n - FB.s)) * H
+  const H = Math.round((W * (FB.north - FB.south)) / ((FB.east - FB.west) * Math.cos((25.7 * Math.PI) / 180)))
+  const px = (lon: number) => ((lon - FB.west) / (FB.east - FB.west)) * W
+  const py = (lat: number) => ((FB.north - lat) / (FB.north - FB.south)) * H
+  const picks = (recommendation?.results ?? []).slice(0, 5)
   const ranked = new globalThis.Map<number, number>()
-  recommendation?.results.forEach((r, i) => ranked.set(r.id, i + 1))
-  const radiusPx = origin && filters.radius ? (filters.radius / 69) * (H / (FB.n - FB.s)) : 0
+  picks.forEach((r, i) => ranked.set(r.id, i + 1))
+  const mute = mode === 'match' && ranked.size > 0
+  const radiusPx = origin && filters.radius ? (filters.radius / 69) * (H / (FB.north - FB.south)) : 0
   // Zoom the viewBox to the visible points (plus home/radius) with padding.
-  const focus = recommendation?.results.length ? recommendation.results : schools
+  const focus = picks.length ? picks : schools
   let vb = `0 0 ${W} ${H}`
   if (focus.length) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
@@ -318,8 +356,15 @@ function FallbackMap() {
     if (origin) ext(px(origin.lng), py(origin.lat), radiusPx)
     if (work) ext(px(work.lng), py(work.lat))
     const pad = Math.max(20, (x1 - x0) * 0.15, (y1 - y0) * 0.15)
-    const vw = Math.max(80, x1 - x0 + pad * 2), vh = Math.max(80, y1 - y0 + pad * 2)
-    vb = `${x0 - pad} ${y0 - pad} ${vw} ${vh}`
+    let vx = x0 - pad
+    let vy = y0 - pad
+    let vw = Math.max(80, x1 - x0 + pad * 2)
+    let vh = Math.max(80, y1 - y0 + pad * 2)
+    vx = Math.max(0, Math.min(vx, W - 80))
+    vy = Math.max(0, Math.min(vy, H - 80))
+    vw = Math.min(vw, W - vx)
+    vh = Math.min(vh, H - vy)
+    vb = `${vx} ${vy} ${vw} ${vh}`
   }
   return (
     <div className="relative h-full w-full bg-[#e8eef5]">
@@ -328,15 +373,35 @@ function FallbackMap() {
         {origin && radiusPx > 0 && <circle cx={px(origin.lng)} cy={py(origin.lat)} r={radiusPx} fill={BRAND_BLUE} fillOpacity={0.07} stroke={BRAND_BLUE} strokeOpacity={0.5} strokeWidth={1.5} />}
         {schools.map((s) => {
           const r = ranked.get(s.id)
-          const active = s.id === selectedId || s.id === hoverId
+          const selected = s.id === selectedId
+          const hovered = s.id === hoverId && !selected
+          const faded = mute && !r && !selected && !hovered
+          const baseR = r ? 9 : faded ? 4 : 6
+          const baseStroke = r ? 2 : 0.8
+          const extra = selected ? 5 : hovered ? 1.6 : 0
           return (
             <g key={s.id} onClick={(e) => { e.stopPropagation(); void select(s.id) }} onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)} className="cursor-pointer">
-              <circle cx={px(s.lon)} cy={py(s.lat)} r={r ? 9 : active ? 6 : 3} fill={CATEGORY_META[s.category].color} stroke="white" strokeWidth={r || active ? 2 : 0.8} opacity={r || active ? 1 : 0.8} />
+              <circle cx={px(s.lon)} cy={py(s.lat)} r={baseR + extra / 2} fill={CATEGORY_META[s.category].color} stroke="white" strokeWidth={baseStroke + extra} opacity={r || selected || hovered ? 1 : faded ? 0.35 : 0.8} />
               {r && (
                 <text x={px(s.lon)} y={py(s.lat) + 3.5} textAnchor="middle" fontSize={10} fontWeight={700} fill="white">
                   {r}
                 </text>
               )}
+              <title>{s.name}</title>
+            </g>
+          )
+        })}
+        {picks.filter((s) => !schools.some((x) => x.id === s.id)).map((s) => {
+          const r = ranked.get(s.id)
+          const selected = s.id === selectedId
+          const hovered = s.id === hoverId && !selected
+          const extra = selected ? 5 : hovered ? 1.6 : 0
+          return (
+            <g key={`pin-${s.id}`} onClick={(e) => { e.stopPropagation(); void select(s.id) }} onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)} className="cursor-pointer">
+              <circle cx={px(s.lon)} cy={py(s.lat)} r={9 + extra / 2} fill={CATEGORY_META[s.category].color} stroke="white" strokeWidth={2 + extra} />
+              <text x={px(s.lon)} y={py(s.lat) + 3.5} textAnchor="middle" fontSize={10} fontWeight={700} fill="white">
+                {r}
+              </text>
               <title>{s.name}</title>
             </g>
           )

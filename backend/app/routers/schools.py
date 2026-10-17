@@ -40,15 +40,18 @@ def list_schools(
         except ValueError as err:
             raise HTTPException(400, "bbox must be south,west,north,east") from err
     origin = (lat, lon) if lat is not None and lon is not None else None
+    fetch_limit = 5000 if assigned and origin else limit
     rows = db.fetch_schools(
         con, categories=cats, grade=grade, fl_grades=fls, bbox=box, q=q,
         program=program, religious=True if religious else None,
-        scholarship=True if scholarship else None, limit=limit,
+        scholarship=True if scholarship else None, limit=fetch_limit,
     )
     items = [db.row_to_school(r, origin) for r in rows]
+    db.attach_offerings(con, items)
     db.annotate_assignments(con, items, origin)
     if assigned and origin:
         items = [i for i in items if i.get("assigned_zones")]
+        items = items[:limit]
     if origin and radius:
         items = [i for i in items if i["distance_miles"] is not None and i["distance_miles"] <= radius]
     if origin:

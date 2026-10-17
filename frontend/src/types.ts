@@ -217,18 +217,21 @@ export interface HouseholdState {
   work_label: string | null
 }
 
-export interface CompareResponse {
-  schools: School[]
-  summary: string
-  tradeoffs: string[]
-  llm_used: boolean
+export interface LatLngBounds {
+  south: number
+  west: number
+  north: number
+  east: number
 }
 
 export interface AppConfig {
   maps_browser_key: string | null
   map_id: string | null
   center: { lat: number; lng: number }
-  bounds: { south: number; west: number; north: number; east: number }
+  /** County box used to accept a home address. */
+  bounds: LatLngBounds
+  /** School coordinates plus a buffer. The map cannot pan outside this box. */
+  map_bounds: LatLngBounds
   features: { llm: boolean; google_geocoding: boolean; google_maps: boolean }
 }
 

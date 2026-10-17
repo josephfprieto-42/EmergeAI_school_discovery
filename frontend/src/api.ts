@@ -1,4 +1,4 @@
-import type { AppConfig, CompareResponse, HouseholdState, Preferences, RecommendResponse, School, SessionState } from './types'
+import type { AppConfig, HouseholdState, RecommendResponse, School, SessionState } from './types'
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, { headers: { 'content-type': 'application/json' }, ...init })
@@ -79,7 +79,4 @@ export const api = {
   deleteHousehold: (id: string) => http<void>(`/api/households/${id}`, { method: 'DELETE' }),
 
   clearSessionOrigin: (id: string) => http<void>(`/api/sessions/${id}/origin`, { method: 'DELETE' }),
-
-  compare: (body: { ids: number[]; origin?: [number, number] | null; preferences?: Preferences | null }) =>
-    http<CompareResponse>('/api/compare', { method: 'POST', body: JSON.stringify(body) }),
 }

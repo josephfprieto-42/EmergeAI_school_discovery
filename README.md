@@ -1,6 +1,6 @@
 # SchoolMatch Miami
 
-AI-assisted school discovery for Miami-Dade County families, from infant care through 12th grade. Explore 3,200+ real providers on a map, filter by grade, type, distance, and Florida DOE grade, describe what you need in plain language to get ranked recommendations with grounded explanations, and compare schools side by side.
+AI-assisted school discovery for Miami-Dade County families, from infant care through 12th grade. Explore 3,200+ real providers on a map, filter by grade, type, distance, and Florida DOE grade, and describe what you need in plain language to get ranked recommendations with grounded explanations.
 
 Everything runs locally: React + TypeScript + Google Maps in the browser, FastAPI + SQLite on the server, OpenAI for language understanding and explanations. No data is fabricated: every value shown comes from a public dataset listed below, and missing values are displayed as "Not reported".
 
@@ -17,7 +17,6 @@ Features:
 - **Map** with 3,289 providers (public, charter, private, licensed child care, Head Start), clustering, category colors, home pin and radius, click-through details.
 - **Explore** panel: optional location (current location, or an address, neighborhood, or ZIP via Places Autocomplete with an offline geocode fallback), name search (full-text), category / grade / distance / FLDOE grade filters, distance-sorted list. Precise coordinates are kept for the open visit unless you choose to remember them with a match chat.
 - **Find my match**: conversational input -> structured preferences (LLM) -> SQL filtering -> deterministic weighted ranking -> LLM explanation restricted to the ranked rows. Numbered pins on the map, "why" and "tradeoffs" per school. Follow-up messages refine the previous preferences.
-- **Compare** up to 4 schools: academics, grade history, distance, size, staffing, community indicators, program signals, plus a narrative tradeoff summary. Best value per row is highlighted.
 - **Graceful degradation**: without an OpenAI key, a keyword parser and templated explanations take over; without a Google key, geocoding falls back to an offline Miami-Dade ZIP/neighborhood table and the map renders as a projected plot.
 
 ## Quick start
@@ -45,7 +44,7 @@ The repository ships with a pre-built `data/schoolmatch.db` and the raw source s
 
 | Variable | Needed for | Notes |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | Conversational preference extraction, explanations, compare narrative | Server-side only. Default model `gpt-4o-mini` (`OPENAI_MODEL`). |
+| `OPENAI_API_KEY` | Conversational preference extraction and explanations | Server-side only. Default model `gpt-4o-mini` (`OPENAI_MODEL`). |
 | `GOOGLE_MAPS_BROWSER_KEY` | Interactive Google Map and Places Autocomplete | Delivered to the browser via `GET /api/config`. In Google Cloud Console restrict it to **HTTP referrers** `http://localhost:5173/*` and to the **Maps JavaScript API** and **Places API (New)**. |
 | `GOOGLE_GEOCODING_KEY` | Address -> coordinates | Server-side only, never sent to the browser. If blank, falls back to `GOOGLE_MAPS_BROWSER_KEY` (then your browser key must also allow the Geocoding API and IP referrers), otherwise to the offline lookup. |
 | `GOOGLE_MAP_ID` | Optional | A Map ID for Advanced Markers/styling. Defaults to Google's `DEMO_MAP_ID`. |
@@ -103,10 +102,10 @@ Recommendation flow (`POST /api/recommend`):
 1. **Extract** — the conversation (plus previously extracted preferences) is turned into a `Preferences` JSON object: location, child grade(s), categories, radius, priorities, keywords, minimum FLDOE grade. Fallback: regex/keyword parser.
 2. **Geocode** — `location_text` is resolved server-side (Google, else offline table).
 3. **Filter** — SQL on category, grade span, FLDOE grade; then radius with automatic widening if fewer than 5 candidates.
-4. **Rank** — deterministic weighted score: distance decay, FLDOE grade + points + achievement, size preference, keyword/program matches, fit (student:teacher ratio, category preference). Weights shift with the stated priorities. The per-component breakdown is returned with each school.
+4. **Rank** — deterministic weighted score: distance decay, attendance-zone match when a home point is set, FLDOE grade + points + achievement, size preference, verified catalog programs (name-only matches are labeled separately), school-reported scholarship participation when cost is a priority, and fit (student:teacher ratio, category preference). Weights shift with the stated priorities. The per-component breakdown is returned with each school.
 5. **Explain** — the top N rows (compact JSON) go to the LLM, which must cite only those fields; output is per-school `why`/`tradeoffs` plus a summary and optional follow-up question. Fallback: templated sentences from the same fields.
 
-Other endpoints: `GET /api/schools` (filters, bbox, FTS `q`, lat/lon/radius), `GET /api/schools/{id}`, `POST /api/compare`, `GET /api/geocode`, `GET /api/config`, `GET /api/health`. Interactive docs at <http://localhost:8000/docs>.
+Other endpoints: `GET /api/schools` (filters, bbox, FTS `q`, lat/lon/radius), `GET /api/schools/{id}`, `GET /api/geocode`, `GET /api/config`, `GET /api/health`. Interactive docs at <http://localhost:8000/docs>.
 
 ## Project layout
 
@@ -116,7 +115,7 @@ backend/
   app/config.py               .env loading
   app/db.py                   SQLite access, haversine, row shaping
   app/schemas.py              Pydantic models
-  app/routers/{schools,recommend,compare,geo}.py
+  app/routers/{schools,recommend,geo}.py
   app/services/ranking.py     deterministic filter + scoring
   app/services/llm.py         OpenAI calls + fallbacks
   app/services/geocode.py     Google Geocoding + offline fallback
@@ -128,7 +127,7 @@ frontend/
   src/App.tsx                 layout, header, mode switch
   src/store.ts                Zustand state + API orchestration
   src/components/MapView.tsx  Google map (clustered markers, pins, radius) + fallback plot
-  src/components/{FilterBar,SchoolList,SchoolDetail,ChatPanel,Compare,ui}.tsx
+  src/components/{FilterBar,SchoolList,SchoolDetail,ChatPanel,ui}.tsx
 data/
   schoolmatch.db              built database
   raw/                        source snapshots
@@ -137,12 +136,14 @@ dev.sh                        run API + web app
 
 ## Limitations
 
-- Magnet and parent-choice program names come from the district catalog. Other themes (Montessori, faith-based, and similar) are still inferred from the provider name when no catalog row exists.
+- Magnet and parent-choice program names come from the Miami-Dade catalog snapshots in `data/raw/mdcps_*page*.json`. Themes are taken from those titles. A match against the school name alone is labeled a name signal. Scripted refetch of yourchoicemiami.org is blocked by a bot challenge and is not bypassed.
+- Attendance boundaries come from Miami-Dade GIS layers 9, 10, and 11 (elementary, high, middle). A point inside a polygon is the assigned school for that level. It does not admit a student to a magnet.
+- Private-school religious affiliation, nonprofit status, accreditation, and scholarship participation come from the school's own Florida directory survey. Survey years of 2023 or earlier are stored but not copied onto the profile. Scholarship participation is not a tuition price.
 - AP, IB, and gifted figures are 2021-22 enrollment counts, not a current course list. A blank count means that figure was not reported.
 - FHSAA sports cover member high schools only. Club lists, and sports at elementary and middle schools, are not in a public file.
 - The International Baccalaureate school directory blocks automated download. IB program names in the district catalog, and IB diploma enrollment in the CRDC, are what this app stores.
 - Florida does not grade private schools or early-childhood providers, so academic comparisons are only available for public and charter schools.
-- Tuition, admissions, ratings, and reviews are not in any public source used here and are therefore not shown.
+- Tuition amounts, bell times, bus routes, and a current special-education catalog were not in a usable public file. Child-care operating hours on the CARES search require a reCAPTCHA and were not collected. The county daycare layer still supplies license number, expiration, and capacity, and campus after-school care is a separate county flag.
 - Daycare license expiration dates come straight from the county layer and may be stale.
 
 ## Attribution
