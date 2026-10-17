@@ -72,7 +72,7 @@ const PEEK = 108
 
 function MapStage() {
   const isDesktop = useIsDesktop()
-  const { mode, selected, selectedId, select, chat, setMapInsetBottom } = useStore()
+  const { mode, selected, selectedId, select, chat, mapInsetBottom, setMapInsetBottom } = useStore()
   const [chatSnap, setChatSnap] = useState<SheetSnap>('half')
   const [detailSnap, setDetailSnap] = useState<SheetSnap>('half')
 
@@ -90,6 +90,9 @@ function MapStage() {
 
   const showChatSheet = !isDesktop && mode === 'match'
   const showDetailSheet = !isDesktop && !!selected
+  const sheetCoversMap = showDetailSheet ? detailSnap === 'full' : showChatSheet && chatSnap === 'full'
+  // Desktop zoom control is two 40px buttons inset from the corner, about 104px tall.
+  const legendBottom = isDesktop ? 112 : Math.max(12, mapInsetBottom + 12)
 
   useEffect(() => {
     if (isDesktop || (!showChatSheet && !showDetailSheet)) setMapInsetBottom(0)
@@ -115,7 +118,7 @@ function MapStage() {
         </div>
       )}
 
-      {isDesktop && <Legend selectedOpen={!!selected} />}
+      {!sheetCoversMap && <Legend selectedOpen={isDesktop && !!selected} bottom={legendBottom} />}
 
       {showChatSheet && (
         <BottomSheet
@@ -157,16 +160,23 @@ function ExploreOverlay() {
   )
 }
 
-function Legend({ selectedOpen }: { selectedOpen: boolean }) {
+function Legend({ selectedOpen, bottom }: { selectedOpen: boolean; bottom: number }) {
   return (
-    <div className={clsx('pointer-events-none absolute bottom-3 z-10 rounded-xl bg-white/90 px-3 py-2 text-[11px] text-slate-600 shadow backdrop-blur', selectedOpen ? 'right-[424px]' : 'right-3')}>
-      <div className="flex gap-3">
-        {Object.values(CATEGORY_META).map((m) => (
-          <span key={m.label} className="inline-flex items-center gap-1">
-            <span className="size-2.5 rounded-full border border-white" style={{ background: m.color }} /> {m.label}
-          </span>
-        ))}
-      </div>
+    <div
+      className={clsx(
+        'pointer-events-none absolute right-3 z-10 flex items-center gap-2 whitespace-nowrap rounded-xl bg-white px-2.5 py-1.5 text-[11px] text-slate-700 shadow md:text-xs',
+        selectedOpen && 'md:right-[424px]',
+      )}
+      style={{ bottom }}
+    >
+      <span className="font-medium text-slate-500">School type</span>
+      {Object.entries(CATEGORY_META).map(([key, m]) => (
+        <span key={key} className="inline-flex items-center gap-1">
+          <span className="size-3 rounded-full border border-slate-200" style={{ background: m.color }} />
+          <span className="md:hidden">{m.short}</span>
+          <span className="hidden md:inline">{m.label}</span>
+        </span>
+      ))}
     </div>
   )
 }

@@ -43,3 +43,8 @@ gmp-place-autocomplete.location-autocomplete {
 @media (min-width: 768px) {
   gmp-place-autocomplete.location-autocomplete { font-size: 0.875rem; }
 }
+
+/* Google rewrites marker inline styles; the title survives, so clicks pass through the glyph. */
+gmp-advanced-marker[title="Home"] {
+  pointer-events: none !important;
+}

@@ -134,7 +134,10 @@ function TextLocationPicker() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     const q = loc.trim()
-    if (!q) return
+    if (!q) {
+      setOrigin(null)
+      return
+    }
     setLocating(true)
     await locate(q)
     setLocating(false)
@@ -146,12 +149,16 @@ function TextLocationPicker() {
         <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
         <input
           value={loc}
-          onChange={(e) => setLoc(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value
+            setLoc(next)
+            if (!next.trim()) setOrigin(null)
+          }}
           placeholder="Home address, neighborhood, or ZIP"
           className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-9 text-base shadow-sm outline-none ring-accent/40 placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 md:text-sm"
         />
         {origin && (
-          <button type="button" onClick={() => setOrigin(null)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Clear location">
+          <button type="button" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation() }} onClick={() => setOrigin(null)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Clear location">
             <X className="size-4" />
           </button>
         )}
@@ -196,13 +203,21 @@ function PlacesLocationPicker() {
       window.setTimeout(() => {
         if (picked) return
         const q = el.value.trim()
-        if (!q) return
+        if (!q) {
+          useStore.getState().setOrigin(null)
+          return
+        }
         setLocating(true)
         void useStore.getState().locate(q).finally(() => setLocating(false))
       }, 250)
     }
+    const onInput = (ev: Event) => {
+      if (!ev.isTrusted || el.value.trim()) return
+      useStore.getState().setOrigin(null)
+    }
     el.addEventListener('gmp-select', onSelect)
     el.addEventListener('keydown', onEnter)
+    el.addEventListener('input', onInput)
     hostRef.current.replaceChildren(el)
     widgetRef.current = el
     if (useStore.getState().origin) el.value = useStore.getState().origin?.label ?? ''
@@ -210,6 +225,7 @@ function PlacesLocationPicker() {
     return () => {
       el.removeEventListener('gmp-select', onSelect)
       el.removeEventListener('keydown', onEnter)
+      el.removeEventListener('input', onInput)
       el.remove()
       widgetRef.current = null
       setReady(false)
@@ -226,7 +242,10 @@ function PlacesLocationPicker() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     const q = widgetRef.current?.value.trim() ?? ''
-    if (!q) return
+    if (!q) {
+      setOrigin(null)
+      return
+    }
     setLocating(true)
     await useStore.getState().locate(q)
     setLocating(false)
@@ -240,7 +259,7 @@ function PlacesLocationPicker() {
         <div ref={hostRef} className={ready ? '' : 'hidden'} />
         {!ready && <div className="h-10 animate-pulse rounded-xl bg-slate-100" />}
         {origin && (
-          <button type="button" onClick={() => setOrigin(null)} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md bg-white p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Clear location">
+          <button type="button" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation() }} onClick={() => setOrigin(null)} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md bg-white p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Clear location">
             <X className="size-4" />
           </button>
         )}

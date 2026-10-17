@@ -31,6 +31,18 @@ interface Filters {
   assigned: boolean
 }
 
+const EMPTY_FILTERS: Filters = {
+  categories: [],
+  grade: null,
+  flGrades: [],
+  q: '',
+  radius: null,
+  program: null,
+  religious: false,
+  scholarship: false,
+  assigned: false,
+}
+
 interface State {
   config: AppConfig | null
   loadConfig: () => Promise<void>
@@ -42,6 +54,7 @@ interface State {
   setFilters: (f: Partial<Filters>) => void
   toggleCategory: (c: Category) => void
   toggleFlGrade: (g: string) => void
+  clearFilters: () => void
 
   origin: Origin | null
   setOrigin: (o: Origin | null) => void
@@ -78,6 +91,8 @@ interface State {
 
   fitRequest: number
   requestFit: () => void
+  /** Bumped to put the map back on its initial county view. */
+  viewReset: number
 
   /** Height in px of UI covering the bottom of the map (mobile bottom sheet). 0 on desktop. */
   mapInsetBottom: number
@@ -110,7 +125,7 @@ export const useStore = create<State>((set, get) => ({
   mode: 'explore',
   setMode: (mode) => set({ mode }),
 
-  filters: { categories: [], grade: null, flGrades: [], q: '', radius: null, program: null, religious: false, scholarship: false, assigned: false },
+  filters: { ...EMPTY_FILTERS },
   setFilters: (f) => {
     set((s) => ({ filters: { ...s.filters, ...f } }))
     void get().loadSchools()
@@ -122,6 +137,16 @@ export const useStore = create<State>((set, get) => ({
   toggleFlGrade: (g) => {
     const cur = get().filters.flGrades
     get().setFilters({ flGrades: cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g] })
+  },
+  clearFilters: () => {
+    set((s) => ({
+      filters: { ...EMPTY_FILTERS },
+      selectedId: null,
+      selected: null,
+      hoverId: null,
+      viewReset: s.viewReset + 1,
+    }))
+    void get().loadSchools()
   },
 
   origin: null,
@@ -140,6 +165,7 @@ export const useStore = create<State>((set, get) => ({
     }
   },
   setOrigin: (origin) => {
+    if (!origin && !get().origin) return
     if (origin && outsideCounty(origin.lat, origin.lng, get().config)) {
       set({ locateError: OUTSIDE_COUNTY })
       return
@@ -343,11 +369,23 @@ export const useStore = create<State>((set, get) => ({
       }
     }
     localStorage.removeItem(SESSION_KEY)
-    set({ sessionId: null, chat: [], prefs: null, recommendation: null })
+    set((s) => ({
+      sessionId: null,
+      chat: [],
+      prefs: null,
+      recommendation: null,
+      filters: { ...EMPTY_FILTERS },
+      selectedId: null,
+      selected: null,
+      hoverId: null,
+      viewReset: s.viewReset + 1,
+    }))
+    void get().loadSchools()
   },
 
   fitRequest: 0,
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
+  viewReset: 0,
 
   mapInsetBottom: 0,
   setMapInsetBottom: (px) => {

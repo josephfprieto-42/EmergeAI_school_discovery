@@ -38,7 +38,7 @@ cp backend/.env.example backend/.env        # then paste your keys (see below)
 
 Open <http://localhost:5173>.
 
-The repository ships with a pre-built `data/schoolmatch.db` and the raw source snapshots under `data/raw/`, so no network access is needed to run the app. To refresh the data, see [Data pipeline](#data-pipeline).
+The repository ships with a pre-built `data/schoolmatch.db` and the raw source snapshots under `data/raw/`, so no network access is needed to run the app. To refresh the data, see [Data pipeline](#data-pipeline). Retrieval details for each file are in [docs/data-sources.md](docs/data-sources.md).
 
 ### API keys (`backend/.env`)
 
@@ -55,28 +55,35 @@ Restart the API after editing `.env`.
 
 ## Data pipeline
 
-All sources are public and keyless. Ingestion was time-boxed to ~15 minutes and produces `data/schoolmatch.db`.
+All sources are public and keyless. Ingestion produces `data/schoolmatch.db`. URLs, request parameters, snapshot filenames, collection timestamps, and sources that were looked up and not loaded are in [docs/data-sources.md](docs/data-sources.md).
 
 | Source | What we take | Join key |
 | --- | --- | --- |
 | [Miami-Dade County Open Data](https://gis-mdc.opendata.arcgis.com/) — `SchoolSite`, `CharterSchool`, `PrivateSchool`, `Daycare`, `HeadStart` layers | Name, address, coordinates, grade span, enrollment/capacity, phone, website, licensing | MDCPS school number for public/charter |
 | [Florida DOE School Grades 2025-26](https://www.fldoe.org/accountability/accountability-reporting/school-grades/) (`SchoolGrades26.xlsx`, District 13 rows) | Letter grade and history, ELA/Math/Science/Social Studies achievement, learning gains, graduation rate, points earned, Title I, % economically disadvantaged | School number |
-| [NCES CCD](https://educationdata.urban.org/documentation/schools.html) via Urban Institute API (LEA 1200390, 2023-24) | Enrollment, free/reduced lunch, teacher FTE (-> student:teacher ratio), magnet, Title I, locale | State school id (`13-XXXX`) |
+| [NCES CCD](https://educationdata.urban.org/documentation/schools.html) via Urban Institute API (LEA 1200390, 2023) | Enrollment, free/reduced lunch, teacher FTE (-> student:teacher ratio), magnet, Title I, locale | State school id (`13-XXXX`) |
 | [M-DCPS school directory](https://mdcpswebapps2.dadeschools.net/Help) `GET /api/schools/{number}?details=true` | Official `web` URL for public schools. A URL is stored only when a GET of that exact URL returns HTTP 2xx | MDCPS location number |
-| [Your Choice Miami](https://yourchoicemiami.org/program-search) program search | Magnet and parent-choice program names, and whether a test or audition is required | MDCPS location number |
+| [Your Choice Miami](https://yourchoicemiami.org/program-search) program search | Magnet and parent-choice program names, and whether a test or audition is required. The rows in the app are the browser page snapshots | MDCPS location number |
 | [CRDC 2021-22](https://educationdata.urban.org/documentation/) AP, IB, and gifted enrollment, via the Urban Institute (LEA 1200390) | Students enrolled in AP (and by subject), the IB diploma, and gifted or talented programs. A missing count stays blank | NCES school id |
 | [FHSAA member directory](https://www.fhsaahome.org/widget/school-directory-locations) | Interscholastic sport and team (boys or girls) for member high schools. A school is linked only when its directory name matches one catalog school | School name |
+| [Miami-Dade attendance boundaries](https://gis.miamidade.gov/arcgis/rest/services/CommunityServices/MD_Educational/MapServer) layers 9, 10, and 11 | Elementary, high, and middle attendance polygons | MDCPS location number |
+| [Florida private school directory](https://www.floridaschoolchoice.org/information/privateschooldirectory/DownloadExcelFile.aspx) | School-reported religious affiliation, nonprofit status, accreditation, scholarship participation. Survey years of 2023 or earlier stay off the profile | School name and address |
 
 Rebuild:
 
 ```bash
-backend/.venv/bin/python backend/ingest/fetch_mdc_gis.py   # 5 ArcGIS layers -> data/raw/mdc_*.json
-backend/.venv/bin/python backend/ingest/fetch_nces.py      # NCES directory  -> data/raw/nces_directory.json
-backend/.venv/bin/python backend/ingest/fetch_mdcps_websites.py  # public websites -> data/raw/mdcps_websites.json
-backend/.venv/bin/python backend/ingest/fetch_offerings.py     # programs, CRDC, FHSAA -> data/raw/
-# FLDOE blocks non-browser clients. Download SchoolGrades26.xlsx from the FLDOE page above
-# in a browser and save it to data/raw/SchoolGrades26.xlsx (a copy is already included).
-backend/.venv/bin/python backend/ingest/build_db.py        # normalize -> data/schoolmatch.db
+backend/.venv/bin/python backend/ingest/fetch_mdc_gis.py
+backend/.venv/bin/python backend/ingest/fetch_nces.py
+backend/.venv/bin/python backend/ingest/fetch_mdcps_websites.py
+backend/.venv/bin/python backend/ingest/fetch_offerings.py crdc fhsaa
+# Florida DOE blocks non-browser clients. Save SchoolGrades26.xlsx from the
+# school-grades page into data/raw/. A copy is already included.
+backend/.venv/bin/python backend/ingest/fetch_boundaries.py
+backend/.venv/bin/python backend/ingest/fetch_private_directory.py
+# yourchoicemiami.org challenges scripted clients. The program rows the app
+# serves are the browser snapshots data/raw/mdcps_*page*.json.
+backend/.venv/bin/python backend/ingest/build_db.py
+backend/.venv/bin/python backend/ingest/apply_enrichment.py
 ```
 
 Normalization notes:
@@ -119,9 +126,14 @@ backend/
   app/services/ranking.py     deterministic filter + scoring
   app/services/llm.py         OpenAI calls + fallbacks
   app/services/geocode.py     Google Geocoding + offline fallback
-  ingest/fetch_mdc_gis.py     ArcGIS downloader
+  ingest/fetch_mdc_gis.py     ArcGIS school and child-care points
   ingest/fetch_nces.py        Urban Institute / NCES downloader
+  ingest/fetch_mdcps_websites.py
+  ingest/fetch_offerings.py   CRDC and FHSAA (choice fetch aborts on a bot challenge)
+  ingest/fetch_boundaries.py  attendance polygons
+  ingest/fetch_private_directory.py
   ingest/build_db.py          normalizer -> SQLite
+  ingest/apply_enrichment.py  boundaries, choice pages, private directory
   .env.example
 frontend/
   src/App.tsx                 layout, header, mode switch
@@ -131,6 +143,9 @@ frontend/
 data/
   schoolmatch.db              built database
   raw/                        source snapshots
+  audit/                      overlap and enrichment reports
+docs/
+  data-sources.md             URL, method, snapshot, and timestamp for each source
 dev.sh                        run API + web app
 ```
 

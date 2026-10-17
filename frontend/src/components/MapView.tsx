@@ -21,7 +21,7 @@ function ringWidth(state: 'normal' | 'selected' | 'hover'): number {
   return 2
 }
 
-function markerContent(s: School, rank: number | null, state: 'normal' | 'selected' | 'hover', muted = false): HTMLElement {
+function markerContent(s: School, rank: number | null, state: 'normal' | 'selected' | 'hover'): HTMLElement {
   const el = document.createElement('div')
   const color = CATEGORY_META[s.category].color
   el.style.cursor = 'pointer'
@@ -33,9 +33,7 @@ function markerContent(s: School, rank: number | null, state: 'normal' | 'select
     el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:9999px 9999px 9999px 0;transform:rotate(-45deg);background:${color};border:${ring}px solid white;box-sizing:border-box;box-shadow:0 2px 6px rgba(0,0,0,.35)"><span style="transform:rotate(45deg);color:white;font:700 12px/1 Inter,system-ui,sans-serif">${rank}</span></div>`
     el.style.transform = 'translateY(-6px)'
   } else {
-    const dot = muted && state === 'normal' ? 6 : 14
-    const opacity = muted && state === 'normal' ? 0.35 : 1
-    el.innerHTML = `<div style="padding:${ring}px;border-radius:9999px;background:white;box-shadow:0 1px 3px rgba(0,0,0,.4);opacity:${opacity};line-height:0"><div style="width:${dot}px;height:${dot}px;border-radius:9999px;background:${color}"></div></div>`
+    el.innerHTML = `<div style="padding:${ring}px;border-radius:9999px;background:white;box-shadow:0 1px 3px rgba(0,0,0,.4);line-height:0"><div style="width:14px;height:14px;border-radius:9999px;background:${color}"></div></div>`
   }
   return el
 }
@@ -55,27 +53,30 @@ function Markers() {
     picks.forEach((r, i) => m.set(r.id, i + 1))
     return m
   }, [picks])
-  const muteOthers = mode === 'match' && rankById.size > 0
+  // Once a match exists, the map shows only that result set.
+  const matchOnly = mode === 'match' && rankById.size > 0
 
-  // Clustered background markers for every school matching the filters.
+  // Clustered markers for schools outside the match set. Hidden during an active match.
   useEffect(() => {
     if (!map || !markerLib) return
     const { AdvancedMarkerElement } = markerLib
     clustererRef.current?.clearMarkers()
     markersRef.current.clear()
     const markers: google.maps.marker.AdvancedMarkerElement[] = []
-    for (const s of schools) {
-      if (rankById.has(s.id)) continue
-      const m = new AdvancedMarkerElement({
-        position: { lat: s.lat, lng: s.lon },
-        content: markerContent(s, null, 'normal', muteOthers),
-        anchorLeft: '-50%',
-        anchorTop: '-50%',
-      })
-      m.addListener('click', () => void select(s.id))
-      bindMarkerHover(m.content as HTMLElement, s.id, setHover)
-      markersRef.current.set(s.id, m)
-      markers.push(m)
+    if (!matchOnly) {
+      for (const s of schools) {
+        if (rankById.has(s.id)) continue
+        const m = new AdvancedMarkerElement({
+          position: { lat: s.lat, lng: s.lon },
+          content: markerContent(s, null, 'normal'),
+          anchorLeft: '-50%',
+          anchorTop: '-50%',
+        })
+        m.addListener('click', () => void select(s.id))
+        bindMarkerHover(m.content as HTMLElement, s.id, setHover)
+        markersRef.current.set(s.id, m)
+        markers.push(m)
+      }
     }
     if (!clustererRef.current) {
       clustererRef.current = new MarkerClusterer({
@@ -95,7 +96,7 @@ function Markers() {
     return () => {
       clustererRef.current?.clearMarkers()
     }
-  }, [map, markerLib, schools, rankById, select, setHover, muteOthers])
+  }, [map, markerLib, schools, rankById, select, setHover, matchOnly])
 
   // Numbered pins for recommendation results (never clustered).
   useEffect(() => {
@@ -125,7 +126,7 @@ function Markers() {
       const clustered = markersRef.current.get(id)
       const school = schools.find((x) => x.id === id)
       if (clustered && school) {
-        clustered.content = markerContent(school, null, state, false)
+        clustered.content = markerContent(school, null, state)
         bindMarkerHover(clustered.content as HTMLElement, id, setHover)
         clustered.zIndex = 4000
         touched.push({ marker: clustered, id, rank: null })
@@ -134,7 +135,7 @@ function Markers() {
       const pick = picks.find((x) => x.id === id)
       if (pinned && pick) {
         const rank = rankById.get(id) ?? null
-        pinned.content = markerContent(pick, rank, state, false)
+        pinned.content = markerContent(pick, rank, state)
         pinned.zIndex = 4000
         touched.push({ marker: pinned, id, rank })
       }
@@ -143,14 +144,25 @@ function Markers() {
       for (const t of touched) {
         const school = (t.rank != null ? picks : schools).find((x) => x.id === t.id)
         if (!school) continue
-        t.marker.content = markerContent(school, t.rank, 'normal', t.rank == null && muteOthers)
+        t.marker.content = markerContent(school, t.rank, 'normal')
         if (t.rank == null) bindMarkerHover(t.marker.content as HTMLElement, t.id, setHover)
         t.marker.zIndex = t.rank != null ? 5000 : null
       }
     }
-  }, [selectedId, hoverId, schools, picks, rankById, muteOthers, setHover])
+  }, [selectedId, hoverId, schools, picks, rankById, setHover])
 
   return null
+}
+
+/** Rough lat/lng box around a point. Avoids a map Circle, which would stay visible after clear. */
+function boundsAround(center: google.maps.LatLngLiteral, radiusMeters: number): google.maps.LatLngBounds {
+  const latRad = (center.lat * Math.PI) / 180
+  const dLat = radiusMeters / 111320
+  const dLng = radiusMeters / (111320 * Math.cos(latRad) || 1)
+  const b = new google.maps.LatLngBounds()
+  b.extend({ lat: center.lat + dLat, lng: center.lng + dLng })
+  b.extend({ lat: center.lat - dLat, lng: center.lng - dLng })
+  return b
 }
 
 /** Bottom-sheet inset, capped so padding never exceeds the visible map. */
@@ -159,9 +171,55 @@ function usableInset(map: google.maps.Map, inset: number): number {
   return Math.max(0, Math.min(inset, Math.round(h * 0.55)))
 }
 
+/**
+ * Where the open map's center sits, relative to the canvas center (+x right, +y down).
+ * A top card shifts it down; a full-height side panel shifts it sideways.
+ */
+function openCenterDelta(map: google.maps.Map): { x: number; y: number } {
+  const mapRect = map.getDiv().getBoundingClientRect()
+  if (mapRect.width < 40 || mapRect.height < 40) return { x: 0, y: 0 }
+  const cx = mapRect.left + mapRect.width / 2
+  const cy = mapRect.top + mapRect.height / 2
+  let left = mapRect.left
+  let right = mapRect.right
+  let top = mapRect.top
+  let bottom = mapRect.bottom
+  const main = map.getDiv().closest('main')
+  if (main) {
+    for (const el of main.querySelectorAll(':scope > *')) {
+      if (!(el instanceof HTMLElement) || el.contains(map.getDiv())) continue
+      const r = el.getBoundingClientRect()
+      const overlapW = Math.min(r.right, mapRect.right) - Math.max(r.left, mapRect.left)
+      const overlapH = Math.min(r.bottom, mapRect.bottom) - Math.max(r.top, mapRect.top)
+      if (overlapW < 48 || overlapH < 48) continue
+      const flush = (a: number, b: number) => Math.abs(a - b) < 28
+      const side = overlapH > mapRect.height * 0.75
+      const bar = overlapW > mapRect.width * 0.5
+      if (side && flush(r.left, mapRect.left)) left = Math.max(left, r.right)
+      else if (side && flush(r.right, mapRect.right)) right = Math.min(right, r.left)
+      else if (bar && flush(r.top, mapRect.top)) top = Math.max(top, r.bottom)
+      else if (bar && flush(r.bottom, mapRect.bottom)) bottom = Math.min(bottom, r.top)
+    }
+  }
+  const inset = usableInset(map, useStore.getState().mapInsetBottom)
+  if (inset > 0) bottom = Math.min(bottom, mapRect.bottom - inset)
+  if (right - left < 80 || bottom - top < 80) return { x: 0, y: 0 }
+  return { x: (left + right) / 2 - cx, y: (top + bottom) / 2 - cy }
+}
+
 function pinContent(label: string, dotColor: string): HTMLElement {
   const el = document.createElement('div')
   el.innerHTML = `<div style="display:flex;align-items:center;gap:6px;background:white;border-radius:9999px;padding:4px 10px 4px 6px;box-shadow:0 2px 10px rgba(0,0,0,.25);font:600 12px Inter,system-ui,sans-serif;color:#0f172a"><span style="width:14px;height:14px;border-radius:9999px;background:${dotColor};border:3px solid white;box-shadow:0 0 0 2px ${dotColor}"></span>${label}</div>`
+  return el
+}
+
+/** Small house glyph. Clicks pass through so nearby school pins stay selectable. */
+function homeMarkerContent(): HTMLElement {
+  const el = document.createElement('div')
+  el.title = 'Home'
+  el.style.pointerEvents = 'none'
+  el.style.lineHeight = '0'
+  el.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="display:block;overflow:visible;filter:drop-shadow(0 1px 2px rgba(15,23,42,.45))"><path d="M4 11.2 12 4.5l8 6.7V20a1 1 0 0 1-1 1h-5.2v-6.2H10.2V21H5a1 1 0 0 1-1-1Z" fill="#0f172a" stroke="white" stroke-width="2.25" stroke-linejoin="round"/></svg>`
   return el
 }
 
@@ -201,7 +259,10 @@ function HouseholdPins() {
 function HomeAndRadius() {
   const map = useMap()
   const markerLib = useMapsLibrary('marker')
-  const { origin, filters, fitRequest, recommendation, selected, work } = useStore()
+  const { origin, filters, fitRequest, recommendation, selected, selectedId, schools, work, mode, viewReset } = useStore()
+  const hadSelection = useRef(selectedId != null)
+  const seenFitReset = useRef(viewReset)
+  const seenSelectionReset = useRef(viewReset)
   const circleRef = useRef<google.maps.Circle | null>(null)
   const homeRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
   // Read at call time so inset changes alone never re-run the fit/pan effects.
@@ -218,13 +279,36 @@ function HomeAndRadius() {
   }, [map, mapInsetBottom, origin, recommendation])
 
   useEffect(() => {
+    const detach = () => {
+      const marker = homeRef.current
+      homeRef.current = null
+      if (marker) {
+        marker.map = null
+        marker.remove()
+      }
+      const circle = circleRef.current
+      circleRef.current = null
+      circle?.setMap(null)
+    }
+    // Drop the pin and radius as soon as the location is cleared, even if the
+    // marker library is not ready on this render.
+    if (!origin) {
+      detach()
+      return
+    }
     if (!map || !markerLib) return
-    if (homeRef.current) homeRef.current.map = null
-    circleRef.current?.setMap(null)
-    if (!origin) return
-    const el = document.createElement('div')
-    el.innerHTML = `<div style="display:flex;align-items:center;gap:6px;background:white;border-radius:9999px;padding:4px 10px 4px 6px;box-shadow:0 2px 10px rgba(0,0,0,.25);font:600 12px Inter,system-ui,sans-serif;color:#0f172a"><span style="width:14px;height:14px;border-radius:9999px;background:#0f172a;border:3px solid white;box-shadow:0 0 0 2px #0f172a"></span>Home</div>`
-    homeRef.current = new markerLib.AdvancedMarkerElement({ map, position: origin, content: el, zIndex: 9000 })
+    detach()
+    const marker = new markerLib.AdvancedMarkerElement({
+      map,
+      position: origin,
+      content: homeMarkerContent(),
+      title: 'Home',
+      zIndex: 9000,
+      gmpClickable: false,
+      anchorLeft: '-50%',
+      anchorTop: '-50%',
+    })
+    homeRef.current = marker
     if (filters.radius) {
       circleRef.current = new google.maps.Circle({
         map,
@@ -238,10 +322,22 @@ function HomeAndRadius() {
         clickable: false,
       })
     }
+    return detach
   }, [map, markerLib, origin, filters.radius])
 
   useEffect(() => {
-    if (!map || fitRequest === 0) return
+    if (!map || viewReset === 0) return
+    map.setCenter(MIAMI)
+    map.setZoom(10)
+    const inset = currentInset()
+    const { origin: home, recommendation: match } = useStore.getState()
+    if (!home && !match && inset > 0) map.panBy(0, usableInset(map, inset) / 2)
+  }, [map, viewReset])
+
+  useEffect(() => {
+    const resetting = seenFitReset.current !== viewReset
+    seenFitReset.current = viewReset
+    if (!map || fitRequest === 0 || resetting) return
     const b = new google.maps.LatLngBounds()
     let n = 0
     const picks = recommendation?.results.slice(0, 5) ?? []
@@ -253,19 +349,59 @@ function HomeAndRadius() {
       if (origin) b.extend(origin)
       if (work) b.extend(work)
     } else if (origin) {
-      const r = (filters.radius ?? 3) * 1609.34
-      const c = new google.maps.Circle({ center: origin, radius: r })
-      const cb = c.getBounds()
-      if (cb) {
-        b.union(cb)
-        n++
-      }
+      b.union(boundsAround(origin, (filters.radius ?? 3) * 1609.34))
+      n++
     }
-    if (n > 0) {
-      const pad = 60
-      map.fitBounds(b, { top: pad, left: pad, right: pad, bottom: pad + usableInset(map, currentInset()) })
+    if (!n) return
+    const pad = 60
+    const homeOnly = picks.length === 0 && !!origin
+    map.fitBounds(b, { top: pad, left: pad, right: pad, bottom: pad + usableInset(map, currentInset()) })
+    if (!homeOnly) return
+    // fitBounds centres on the canvas, which sits under the search card. Slide so home
+    // lands in the middle of the map that is still visible.
+    const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
+      const d = openCenterDelta(map)
+      if (Math.abs(d.x) < 8 && Math.abs(d.y) < 8) return
+      map.panBy(-d.x, -d.y)
+    })
+    return () => google.maps.event.removeListener(listener)
+  }, [map, fitRequest, recommendation, origin, work, filters.radius, viewReset])
+
+  // Closing a school should put every loaded marker back in frame, not leave the map on that pin.
+  useEffect(() => {
+    if (!map) return
+    const resetting = seenSelectionReset.current !== viewReset
+    seenSelectionReset.current = viewReset
+    const clearing = hadSelection.current && selectedId == null
+    hadSelection.current = selectedId != null
+    if (!clearing || resetting) return
+    const b = new google.maps.LatLngBounds()
+    let n = 0
+    const picks = recommendation?.results.slice(0, 5) ?? []
+    const matchOnly = mode === 'match' && picks.length > 0
+    const pickIds = new Set(picks.map((s) => s.id))
+    for (const s of schools) {
+      if (matchOnly && !pickIds.has(s.id)) continue
+      b.extend({ lat: s.lat, lng: s.lon })
+      n++
     }
-  }, [map, fitRequest, recommendation, origin, work, filters.radius])
+    for (const s of picks) {
+      if (schools.some((x) => x.id === s.id)) continue
+      b.extend({ lat: s.lat, lng: s.lon })
+      n++
+    }
+    if (origin) {
+      b.extend(origin)
+      n++
+    }
+    if (work) {
+      b.extend(work)
+      n++
+    }
+    if (!n) return
+    const pad = 48
+    map.fitBounds(b, { top: pad, left: pad, right: pad, bottom: pad + usableInset(map, currentInset()) })
+  }, [map, selectedId, schools, recommendation, origin, work, mode, viewReset])
 
   useEffect(() => {
     if (!map || !selected) return
@@ -344,10 +480,12 @@ function FallbackMap() {
   const picks = (recommendation?.results ?? []).slice(0, 5)
   const ranked = new globalThis.Map<number, number>()
   picks.forEach((r, i) => ranked.set(r.id, i + 1))
-  const mute = mode === 'match' && ranked.size > 0
+  const matchOnly = mode === 'match' && ranked.size > 0
+  const visibleSchools = matchOnly ? schools.filter((s) => ranked.has(s.id)) : schools
   const radiusPx = origin && filters.radius ? (filters.radius / 69) * (H / (FB.north - FB.south)) : 0
-  // Zoom the viewBox to the visible points (plus home/radius) with padding.
-  const focus = picks.length ? picks : schools
+  // No selection frames every visible school. A selection frames that school.
+  const selectedSchool = selectedId == null ? null : (visibleSchools.find((s) => s.id === selectedId) ?? picks.find((s) => s.id === selectedId) ?? null)
+  const focus = selectedSchool ? [selectedSchool] : matchOnly ? picks : visibleSchools.length ? visibleSchools : picks
   let vb = `0 0 ${W} ${H}`
   if (focus.length) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
@@ -371,17 +509,16 @@ function FallbackMap() {
       <svg viewBox={vb} className="h-full w-full" preserveAspectRatio="xMidYMid meet" onClick={() => void select(null)}>
         <rect width={W} height={H} fill="#e8eef5" />
         {origin && radiusPx > 0 && <circle cx={px(origin.lng)} cy={py(origin.lat)} r={radiusPx} fill={BRAND_BLUE} fillOpacity={0.07} stroke={BRAND_BLUE} strokeOpacity={0.5} strokeWidth={1.5} />}
-        {schools.map((s) => {
+        {visibleSchools.map((s) => {
           const r = ranked.get(s.id)
           const selected = s.id === selectedId
           const hovered = s.id === hoverId && !selected
-          const faded = mute && !r && !selected && !hovered
-          const baseR = r ? 9 : faded ? 4 : 6
+          const baseR = r ? 9 : 6
           const baseStroke = r ? 2 : 0.8
           const extra = selected ? 5 : hovered ? 1.6 : 0
           return (
             <g key={s.id} onClick={(e) => { e.stopPropagation(); void select(s.id) }} onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)} className="cursor-pointer">
-              <circle cx={px(s.lon)} cy={py(s.lat)} r={baseR + extra / 2} fill={CATEGORY_META[s.category].color} stroke="white" strokeWidth={baseStroke + extra} opacity={r || selected || hovered ? 1 : faded ? 0.35 : 0.8} />
+              <circle cx={px(s.lon)} cy={py(s.lat)} r={baseR + extra / 2} fill={CATEGORY_META[s.category].color} stroke="white" strokeWidth={baseStroke + extra} opacity={r || selected || hovered ? 1 : 0.8} />
               {r && (
                 <text x={px(s.lon)} y={py(s.lat) + 3.5} textAnchor="middle" fontSize={10} fontWeight={700} fill="white">
                   {r}
@@ -408,8 +545,9 @@ function FallbackMap() {
         })}
         {origin && work && <line x1={px(origin.lng)} y1={py(origin.lat)} x2={px(work.lng)} y2={py(work.lat)} stroke="#7c3aed" strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="4 4" />}
         {origin && (
-          <g>
-            <circle cx={px(origin.lng)} cy={py(origin.lat)} r={7} fill="#0f172a" stroke="white" strokeWidth={2.5} />
+          <g transform={`translate(${px(origin.lng)} ${py(origin.lat)})`} pointerEvents="none">
+            <title>Home</title>
+            <path d="M-5.2 -1.2 0 -5.6 5.2 -1.2V5.2h-3.4V1.6H-1.8v3.6H-5.2Z" fill="#0f172a" stroke="white" strokeWidth={1.6} strokeLinejoin="round" />
           </g>
         )}
         {work && (

@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ChevronDown, Search } from 'lucide-react'
+import { ChevronDown, RotateCcw, Search } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { CATEGORY_META, GRADE_OPTIONS } from '../lib/format'
 import { useStore } from '../store'
@@ -42,14 +42,32 @@ function FilterSection({
   )
 }
 
+function filtersDirty(filters: { categories: string[]; grade: number | null; flGrades: string[]; q: string; radius: number | null; program: string | null; religious: boolean; scholarship: boolean; assigned: boolean }) {
+  return Boolean(
+    filters.categories.length ||
+      filters.grade != null ||
+      filters.flGrades.length ||
+      filters.q ||
+      filters.radius != null ||
+      filters.program ||
+      filters.religious ||
+      filters.scholarship ||
+      filters.assigned,
+  )
+}
+
 export function FilterBar() {
-  const { filters, setFilters, toggleCategory, toggleFlGrade, origin } = useStore()
+  const { filters, setFilters, toggleCategory, toggleFlGrade, clearFilters, origin } = useStore()
   const [q, setQ] = useState(filters.q)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [typeOpen, setTypeOpen] = useState(true)
   const [gradeOpen, setGradeOpen] = useState(true)
   const [flOpen, setFlOpen] = useState(false)
   const [factsOpen, setFactsOpen] = useState(false)
+
+  useEffect(() => {
+    setQ(filters.q)
+  }, [filters.q])
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -105,6 +123,20 @@ export function FilterBar() {
           <span className="min-w-0 truncate font-normal text-slate-500">{filtersSummary}</span>
           <ChevronDown className={clsx('size-3.5 shrink-0 text-slate-400 transition', !filtersOpen && '-rotate-90')} />
         </button>
+        {filtersDirty(filters) && (
+          <button
+            type="button"
+            onClick={() => {
+              setQ('')
+              clearFilters()
+            }}
+            title="Clear filters"
+            aria-label="Clear filters"
+            className="shrink-0 rounded-lg border border-slate-200 bg-white p-1.5 text-slate-500 shadow-sm hover:bg-slate-50"
+          >
+            <RotateCcw className="size-3.5" />
+          </button>
+        )}
       </div>
 
       {filtersOpen && (
