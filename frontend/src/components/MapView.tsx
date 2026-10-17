@@ -153,7 +153,6 @@ function Markers() {
     const markers: google.maps.marker.AdvancedMarkerElement[] = []
     if (!matchOnly) {
       for (const s of schools) {
-        if (rankById.has(s.id)) continue
         const m = new AdvancedMarkerElement({
           position: { lat: s.lat, lng: s.lon },
           content: markerContent(s, null, 'normal'),
@@ -187,15 +186,16 @@ function Markers() {
     return () => {
       clustererRef.current?.clearMarkers()
     }
-  }, [map, markerLib, schools, rankById, select, setHover, matchOnly])
+  }, [map, markerLib, schools, select, setHover, matchOnly])
 
-  // Numbered pins for recommendation results (never clustered).
+  // Numbered pins for recommendation results. Explore uses the regular markers instead.
   useEffect(() => {
     if (!map || !markerLib) return
     const { AdvancedMarkerElement } = markerLib
     pinnedRef.current.forEach((m) => (m.map = null))
     pinnedRef.current = []
     pinnedByIdRef.current.clear()
+    if (!matchOnly) return
     for (const s of picks) {
       const rank = rankById.get(s.id) ?? null
       const m = new AdvancedMarkerElement({ map, position: { lat: s.lat, lng: s.lon }, content: markerContent(s, rank, 'normal'), zIndex: 5000 })
@@ -206,7 +206,7 @@ function Markers() {
     return () => {
       pinnedRef.current.forEach((m) => (m.map = null))
     }
-  }, [map, markerLib, picks, rankById, select])
+  }, [map, markerLib, picks, rankById, select, matchOnly])
 
   // Selected / hover styling. The colored dot stays the same size; only the white ring grows.
   useEffect(() => {
@@ -224,7 +224,7 @@ function Markers() {
       }
       const pinned = pinnedByIdRef.current.get(id)
       const pick = picks.find((x) => x.id === id)
-      if (pinned && pick) {
+      if (matchOnly && pinned && pick) {
         const rank = rankById.get(id) ?? null
         pinned.content = markerContent(pick, rank, state)
         pinned.zIndex = 4000
@@ -240,7 +240,7 @@ function Markers() {
         t.marker.zIndex = t.rank != null ? 5000 : null
       }
     }
-  }, [selectedId, hoverId, schools, picks, rankById, setHover])
+  }, [selectedId, hoverId, schools, picks, rankById, setHover, matchOnly])
 
   return null
 }
@@ -601,7 +601,7 @@ function FallbackMap() {
         <rect width={W} height={H} fill="#e8eef5" />
         {origin && radiusPx > 0 && <circle cx={px(origin.lng)} cy={py(origin.lat)} r={radiusPx} fill={BRAND_BLUE} fillOpacity={0.07} stroke={BRAND_BLUE} strokeOpacity={0.5} strokeWidth={1.5} />}
         {visibleSchools.map((s) => {
-          const r = ranked.get(s.id)
+          const r = matchOnly ? ranked.get(s.id) : undefined
           const selected = s.id === selectedId
           const hovered = s.id === hoverId && !selected
           const baseR = r ? 9 : 6
@@ -619,7 +619,7 @@ function FallbackMap() {
             </g>
           )
         })}
-        {picks.filter((s) => !schools.some((x) => x.id === s.id)).map((s) => {
+        {matchOnly && picks.filter((s) => !schools.some((x) => x.id === s.id)).map((s) => {
           const r = ranked.get(s.id)
           const selected = s.id === selectedId
           const hovered = s.id === hoverId && !selected

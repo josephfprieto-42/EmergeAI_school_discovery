@@ -91,8 +91,8 @@ function MapStage() {
   const showChatSheet = !isDesktop && mode === 'match'
   const showDetailSheet = !isDesktop && !!selected
   const sheetCoversMap = showDetailSheet ? detailSnap === 'full' : showChatSheet && chatSnap === 'full'
-  // Desktop zoom control is two 40px buttons inset from the corner, about 104px tall.
-  const legendBottom = isDesktop ? 112 : Math.max(12, mapInsetBottom + 12)
+  // Sits under the +/- control, clear of the Google attribution line.
+  const legendBottom = isDesktop ? 22 : Math.max(12, mapInsetBottom + 12)
 
   useEffect(() => {
     if (isDesktop || (!showChatSheet && !showDetailSheet)) setMapInsetBottom(0)
