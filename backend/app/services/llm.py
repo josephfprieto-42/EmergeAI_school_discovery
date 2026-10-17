@@ -794,3 +794,271 @@ def explain(
     except Exception:  # noqa: BLE001
         s, f, e = _fallback_explain(prefs, schools, household, work_label, changes, question, stage, origin)
         return s, f, e, False
+
+
+# ----------------------------------------------------------------------------------
+# One-school briefing (the profile "Ask AI" button)
+# ----------------------------------------------------------------------------------
+
+DESCRIBE_SYSTEM = """You are a knowledgeable, warm Miami-Dade school counselor. A parent opened one school and asked what it is like.
+You are given a JSON object of verified public data for that school only (Miami-Dade County GIS, Florida DOE school grades, NCES, and the other catalogs named in the fields).
+
+Rules:
+- Use ONLY facts present in the JSON. Never invent programs, test scores, tuition, reviews, hours, bus routes, or reputations.
+- When a value is absent, say it is not reported rather than guessing.
+- Florida DOE grades and achievement percentages exist only for public and charter schools. If category is private or early_childhood, say Florida does not publish school grades or test results for that type of provider.
+- Be concrete: cite the address, grades served, miles_from_selected_location when present (say "from your location", never "point of interest"), the state grade, achievement numbers as percents such as 71%, enrollment or capacity, student-teacher ratio, published programs, CRDC counts, and FHSAA sports.
+- A gifted, AP, or IB count is a 2021-22 headcount. Do not describe it as a focus, culture, or reputation.
+- Mention a topic only when its field is in the JSON. When do_not_mention is present, those topics must not appear at all, including to say they are missing or not offered.
+- magnet false only means NCES did not flag a magnet. Do not turn that into a claim about choice admission.
+- Write plain sentences. No markdown, links, headings, or bullet lists.
+- Do not add a closing judgment. Avoid words such as overall, excellent, supportive, well-rounded, or significant.
+- cost is "tuition-free" for public schools, charter schools, Head Start, and Early Head Start, or "not reported" for private schools and licensed child care. Never estimate a dollar amount.
+- programs, when present, are magnet and parent-choice program names published by Miami-Dade County Public Schools. Cite those names. Do not invent programs that are not in the list.
+- eligibility and admission_note are catalog rules, not a determination that a particular child qualifies. Living in the attendance boundary does not admit a student to a magnet.
+- assigned_zones, when present, means the parent's location falls inside that school's published attendance polygon. Say so, and say boundary residence is not magnet or choice admission.
+- religious, denomination, nonprofit, accreditation, and scholarship_programs come from the school's own Florida private-school survey. Say "school-reported" and cite directory_survey_year when present. A scholarship flag is not a tuition amount.
+- academics, when present, is Civil Rights Data Collection 2021-22 enrollment. A number is students enrolled that year. Do not say a school "does not offer" AP or gifted when the count is absent.
+- sports, when present, are FHSAA interscholastic teams. Cite only sports in that list.
+- after_school_care true means a county-licensed provider operates on campus. Hours are not in the data.
+- Write 2 to 4 short paragraphs of plain prose a parent can read. Cover what the school is and where, who it serves, the academic record or why none is published, then programs, sports, attendance, and cost when those fields exist.
+- Do not give a ranked recommendation and do not ask the parent a follow-up question.
+
+Return ONLY JSON: {"answer": string}"""
+
+
+_KIND = {
+    "traditional": "district public school",
+    "charter": "charter school",
+    "private": "private school",
+    "daycare": "licensed child-care provider",
+    "head_start": "Head Start provider",
+    "early_head_start": "Early Head Start provider",
+    "alternative": "alternative school",
+    "special_center": "special education center",
+    "primary_learning_center": "primary learning center",
+    "virtual": "virtual school",
+}
+
+
+def _pct(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    return f"{round(float(value))}%"
+
+
+def _grade_span(school: dict[str, Any]) -> str:
+    from ..db import grade_label
+
+    low, high = school.get("grade_low"), school.get("grade_high")
+    if low is not None and high is not None:
+        start, end = grade_label(low), grade_label(high)
+        return start if start == end else f"{start}–{end}"
+    return school.get("grades_text") or "grades not reported"
+
+
+def _tuition_label(school: dict[str, Any]) -> str:
+    if school.get("cost"):
+        return school["cost"]
+    if school.get("category") in ("public", "charter") or school.get("subtype") in ("head_start", "early_head_start"):
+        return "tuition-free"
+    return "not reported"
+
+
+def _brief_payload(school: dict[str, Any]) -> dict[str, Any]:
+    payload = _compact({**school, "cost": _tuition_label(school)})
+    if payload.get("distance_miles") is not None:
+        payload["miles_from_selected_location"] = payload.pop("distance_miles")
+    for key in ("phone", "zip", "ela_gains", "math_gains", "college_career_accel", "license_number"):
+        if school.get(key) not in (None, "", []):
+            payload[key] = school[key]
+    history = school.get("grade_history")
+    if isinstance(history, dict) and history:
+        years = sorted(history, key=lambda year: str(year), reverse=True)[:6]
+        payload["grade_history"] = {year: history[year] for year in years}
+    silent: list[str] = []
+    if not payload.get("programs"):
+        silent.append("magnet or choice programs")
+    academics = payload.get("academics") or {}
+    if not academics:
+        silent.append("Advanced Placement, IB, and gifted enrollment")
+    else:
+        if not academics.get("ap_enrollment"):
+            silent.append("Advanced Placement")
+        if not academics.get("ib_enrollment"):
+            silent.append("IB")
+        if not academics.get("gifted_enrollment"):
+            silent.append("gifted enrollment")
+    if not payload.get("sports"):
+        silent.append("sports")
+    if silent:
+        payload["do_not_mention"] = silent
+    return payload
+
+
+def _fallback_describe(school: dict[str, Any]) -> str:
+    name = school.get("name") or "This provider"
+    kind = _KIND.get(school.get("subtype") or "")
+    if not kind:
+        kind = {
+            "public": "public school",
+            "charter": "charter school",
+            "private": "private school",
+            "early_childhood": "early childhood provider",
+        }.get(school.get("category"), "school")
+    place = ", ".join(
+        part
+        for part in (
+            school.get("address"),
+            " ".join(bit for bit in (school.get("city"), school.get("zip")) if bit) or None,
+        )
+        if part
+    )
+    opening = f"{name} is a {kind}" + (f" at {place}." if place else ".")
+    if school.get("distance_miles") is not None:
+        opening += f" It is {float(school['distance_miles']):.1f} miles from your location."
+    if school.get("phone"):
+        opening += f" Phone: {school['phone']}."
+
+    facts = [f"It serves {_grade_span(school)}."]
+    if school.get("enrollment"):
+        facts.append(f"Enrollment is {int(school['enrollment']):,}.")
+    elif school.get("capacity"):
+        facts.append(f"Licensed capacity is {int(school['capacity']):,}.")
+    if school.get("student_teacher_ratio"):
+        facts.append(f"The student-teacher ratio is {round(float(school['student_teacher_ratio']))}:1.")
+    if school.get("frl_pct") is not None:
+        facts.append(f"{_pct(school['frl_pct'])} of students are reported as eligible for free or reduced-price lunch.")
+    if school.get("year_established"):
+        facts.append(f"It was established in {school['year_established']}.")
+    if school.get("coed") == "coed":
+        facts.append("Enrollment is co-ed.")
+    elif school.get("coed") in ("boys", "girls"):
+        facts.append(f"It enrolls {school['coed']}.")
+    if school.get("magnet"):
+        facts.append("NCES lists it as a magnet school.")
+
+    paragraphs = [opening, " ".join(facts)]
+    category = school.get("category")
+    if category in ("public", "charter") and school.get("fl_grade"):
+        academic = [f"The Florida DOE 2025-26 school grade is {school['fl_grade']}."]
+        if school.get("fl_grade_prev1"):
+            academic.append(f"The prior-year grade was {school['fl_grade_prev1']}.")
+        scores = []
+        for label, key in (
+            ("ELA proficiency", "ela_ach"),
+            ("math proficiency", "math_ach"),
+            ("science", "sci_ach"),
+            ("social studies", "ss_ach"),
+            ("ELA learning gains", "ela_gains"),
+            ("math learning gains", "math_gains"),
+            ("graduation rate", "grad_rate"),
+            ("college and career acceleration", "college_career_accel"),
+        ):
+            shown = _pct(school.get(key))
+            if shown:
+                scores.append(f"{label} {shown}")
+        if scores:
+            academic.append("Reported results: " + "; ".join(scores) + ".")
+        if school.get("pct_points") is not None:
+            academic.append(f"It earned {_pct(school['pct_points'])} of possible accountability points.")
+        if school.get("pct_econ_disadvantaged") is not None:
+            academic.append(f"{_pct(school['pct_econ_disadvantaged'])} of students are economically disadvantaged.")
+        if school.get("fl_title_i"):
+            academic.append("It is a Title I school.")
+        paragraphs.append(" ".join(academic))
+    elif category in ("public", "charter"):
+        paragraphs.append("No 2025-26 Florida DOE school grade was published for this school.")
+    else:
+        unpublished = "private schools" if category == "private" else "early childhood providers"
+        paragraphs.append(
+            f"Florida does not publish school grades or test results for {unpublished}. "
+            "The details here come from Miami-Dade County's public directory."
+        )
+
+    extras: list[str] = []
+    programs = [p.get("name") for p in (school.get("programs") or []) if p.get("name")]
+    if programs:
+        extras.append("M-DCPS magnet and choice programs include " + ", ".join(programs[:8]) + ".")
+        notes = [p.get("admission_note") for p in school.get("programs") or [] if p.get("admission_note")]
+        if notes:
+            extras.append(notes[0])
+    academics = school.get("academics") or {}
+    enrolled = []
+    for label, key in (("Advanced Placement", "ap_enrollment"), ("the IB diploma", "ib_enrollment"), ("gifted and talented programs", "gifted_enrollment")):
+        if academics.get(key):
+            enrolled.append(f"{int(academics[key]):,} students in {label}")
+    if enrolled:
+        extras.append("In the 2021-22 Civil Rights Data Collection, this school reported " + "; ".join(enrolled) + ".")
+    sports: list[str] = []
+    for row in school.get("sports") or []:
+        label = row.get("sport")
+        if not label:
+            continue
+        if row.get("team"):
+            label = f"{label} ({str(row['team']).lower()})"
+        if label not in sports:
+            sports.append(label)
+    if sports:
+        extras.append("FHSAA sports include " + ", ".join(sports[:12]) + ".")
+    zones = school.get("assigned_zones") or []
+    if zones:
+        levels = " and ".join(zone.get("level") for zone in zones if zone.get("level"))
+        extras.append(
+            f"Your location is inside this school's published {levels} attendance area. "
+            "Living in the boundary is not the same as admission to a magnet or choice program."
+        )
+    elif school.get("attendance_levels"):
+        extras.append("This campus has a published " + " and ".join(school["attendance_levels"]) + " attendance area.")
+    if school.get("religious") is True:
+        faith = f": {school['denomination']}" if school.get("denomination") else ""
+        year = f" ({school['directory_survey_year']} survey)" if school.get("directory_survey_year") else ""
+        extras.append(f"The school reported a religious affiliation{faith}{year}.")
+    elif school.get("religious") is False:
+        extras.append("The school reported that it is not religious.")
+    if school.get("accreditation"):
+        extras.append(f"School-reported accreditation: {school['accreditation']}.")
+    if school.get("scholarship_programs"):
+        extras.append(
+            "It reported participating in " + ", ".join(school["scholarship_programs"]) + ". That is not a tuition amount."
+        )
+    cost = _tuition_label(school)
+    if cost == "tuition-free":
+        extras.append("This provider is tuition-free.")
+    else:
+        extras.append("Tuition is not reported.")
+    if school.get("after_school_care"):
+        names = school.get("after_school_care_names") or []
+        who = names[0] if names else "A county-licensed provider"
+        extras.append(f"{who} runs after-school care on this campus. Hours are not reported.")
+    if school.get("license_number"):
+        expiry = f", listed expiration {school['license_expires']}" if school.get("license_expires") else ""
+        extras.append(f"DCF license {school['license_number']}{expiry}.")
+    if extras:
+        paragraphs.append(" ".join(extras))
+    return "\n\n".join(paragraphs)
+
+
+def describe_school(school: dict[str, Any]) -> tuple[str, bool]:
+    """A grounded profile of one school. Falls back to the public-record sentences without a key."""
+    fallback = _fallback_describe(school)
+    client = _get_client()
+    if not client:
+        return fallback, False
+    try:
+        resp = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": DESCRIBE_SYSTEM},
+                {"role": "user", "content": json.dumps(_brief_payload(school))},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+        )
+        data = json.loads(resp.choices[0].message.content or "{}")
+        answer = (data.get("answer") or "").strip()
+        if len(answer) < 40:
+            return fallback, False
+        return answer, True
+    except Exception:  # noqa: BLE001
+        return fallback, False

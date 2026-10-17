@@ -5,6 +5,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from .. import db
+from ..schemas import SchoolAskRequest, SchoolAskResponse
+from ..services import llm
 
 router = APIRouter(prefix="/api/schools", tags=["schools"])
 
@@ -61,6 +63,10 @@ def list_schools(
 
 @router.get("/{school_id}")
 def get_school(school_id: int, con=Depends(get_con), lat: Optional[float] = None, lon: Optional[float] = None):
+    return _load_school(con, school_id, lat, lon)
+
+
+def _load_school(con, school_id: int, lat: Optional[float], lon: Optional[float]) -> dict:
     row = db.fetch_school(con, school_id)
     if not row:
         raise HTTPException(404, "School not found")
@@ -69,3 +75,12 @@ def get_school(school_id: int, con=Depends(get_con), lat: Optional[float] = None
     db.attach_offerings(con, [school])
     db.annotate_assignments(con, [school], origin)
     return school
+
+
+@router.post("/{school_id}/ask", response_model=SchoolAskResponse)
+def ask_about_school(school_id: int, body: Optional[SchoolAskRequest] = None, con=Depends(get_con)):
+    """Describe one school from its public record. This does not start or change a match search."""
+    body = body or SchoolAskRequest()
+    school = _load_school(con, school_id, body.lat, body.lon)
+    answer, used_llm = llm.describe_school(school)
+    return SchoolAskResponse(school_id=school_id, answer=answer, llm_used=used_llm)

@@ -8,6 +8,94 @@ import type { School } from '../types'
 
 const MIAMI = { lat: 25.76, lng: -80.3 }
 const BRAND_BLUE = CATEGORY_META.public.color
+/** Far enough to split a cluster into pins, short of a rooftop dive. */
+const CLUSTER_ZOOM_CAP = 16
+
+let clusterCameraToken = 0
+
+/** Zoom at which `bounds` fills the viewport, matching what fitBounds aims for. */
+function zoomToFit(map: google.maps.Map, bounds: google.maps.LatLngBounds): number {
+  const ne = bounds.getNorthEast()
+  const sw = bounds.getSouthWest()
+  const midLat = (ne.lat() + sw.lat()) / 2
+  const latMeters = Math.abs(ne.lat() - sw.lat()) * 111320
+  const lngMeters = Math.abs(ne.lng() - sw.lng()) * 111320 * Math.cos((midLat * Math.PI) / 180)
+  const div = map.getDiv()
+  const width = Math.max(div.clientWidth * 0.72, 160)
+  const height = Math.max(div.clientHeight * 0.72, 160)
+  const mpp0 = 156543.03392 * Math.cos((midLat * Math.PI) / 180)
+  const zoomFor = (meters: number, px: number) => (meters < 30 ? CLUSTER_ZOOM_CAP : Math.log2((px * mpp0) / meters))
+  return Math.min(CLUSTER_ZOOM_CAP, zoomFor(lngMeters, width), zoomFor(latMeters, height))
+}
+
+function easeInOut(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
+}
+
+/**
+ * fitBounds only animates a small zoom change, so a tight cluster snaps.
+ * Pan onto the cluster first, then zoom, so it stays in the middle instead of
+ * sliding away while the zoom pulls toward the old center.
+ */
+function animateToBounds(map: google.maps.Map, bounds: google.maps.LatLngBounds) {
+  const startZoom = map.getZoom()
+  const startCenter = map.getCenter()
+  const center = bounds.getCenter()
+  if (startZoom == null || !startCenter) {
+    map.fitBounds(bounds)
+    return
+  }
+  const targetZoom = Math.max(startZoom, zoomToFit(map, bounds))
+  const target = { lat: center.lat(), lng: center.lng() }
+  const start = { lat: startCenter.lat(), lng: startCenter.lng() }
+  const levels = Math.abs(targetZoom - startZoom)
+  const moved = Math.abs(start.lat - target.lat) > 1e-5 || Math.abs(start.lng - target.lng) > 1e-5
+  if (levels < 0.05 && !moved) return
+  const duration = Math.min(3200, Math.max(900, levels * 340))
+  const token = ++clusterCameraToken
+  let t0 = 0
+  let cleaned = false
+  const div = map.getDiv()
+  const cleanup = () => {
+    if (cleaned) return
+    cleaned = true
+    drag.remove()
+    div.removeEventListener('wheel', cancel)
+  }
+  const cancel = () => {
+    if (clusterCameraToken !== token) return
+    clusterCameraToken += 1
+    cleanup()
+  }
+  const drag = map.addListener('dragstart', cancel)
+  div.addEventListener('wheel', cancel, { passive: true })
+  const step = (now: number) => {
+    if (token !== clusterCameraToken) {
+      cleanup()
+      return
+    }
+    if (!t0) t0 = now
+    const t = Math.min(1, (now - t0) / duration)
+    // Pan while the zoom stays put, then zoom with the cluster already centered.
+    const panShare = moved && levels >= 0.05 ? 0.45 : moved ? 1 : 0
+    let lat = target.lat
+    let lng = target.lng
+    let zoom = targetZoom
+    if (t < panShare) {
+      const u = easeInOut(t / panShare)
+      lat = start.lat + (target.lat - start.lat) * u
+      lng = start.lng + (target.lng - start.lng) * u
+      zoom = startZoom
+    } else {
+      const u = easeInOut(panShare >= 1 ? 1 : (t - panShare) / (1 - panShare))
+      zoom = startZoom + (targetZoom - startZoom) * u
+    }
+    map.moveCamera({ center: { lat, lng }, zoom })
+    if (t < 1) requestAnimationFrame(step)
+    else cleanup()
+  }
+  requestAnimationFrame(step)
+}
 
 function bindMarkerHover(el: HTMLElement, id: number, setHover: (id: number | null) => void) {
   el.addEventListener('mouseenter', () => setHover(id))
@@ -91,6 +179,9 @@ function Markers() {
           },
         },
       })
+    }
+    clustererRef.current.onClusterClick = (_event, cluster, clusterMap) => {
+      if (cluster.bounds) animateToBounds(clusterMap, cluster.bounds)
     }
     clustererRef.current.addMarkers(markers)
     return () => {

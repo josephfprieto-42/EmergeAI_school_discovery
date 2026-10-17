@@ -63,6 +63,12 @@ export const api = {
     return http<School>(`/api/schools/${id}?${sp}`)
   },
 
+  askSchool: (id: number, origin?: { lat: number; lng: number } | null) =>
+    http<{ school_id: number; answer: string; llm_used: boolean }>(`/api/schools/${id}/ask`, {
+      method: 'POST',
+      body: JSON.stringify(origin ? { lat: origin.lat, lon: origin.lng } : {}),
+    }),
+
   recommend: (body: {
     message: string
     session_id?: string | null

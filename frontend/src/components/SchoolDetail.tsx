@@ -1,23 +1,73 @@
 import clsx from 'clsx'
 import { ExternalLink, Phone, Sparkles, X } from 'lucide-react'
-import { CATEGORY_META, fmtNum, fmtPct, gradeSpan, SUBTYPE_LABEL } from '../lib/format'
+import { useRef, useState, type MouseEvent } from 'react'
+import { api } from '../api'
+import { fmtNum, fmtPct, gradeSpan, SUBTYPE_LABEL } from '../lib/format'
 import { useStore } from '../store'
-import { CategoryPill, GradeBadge, Stat } from './ui'
+import { CategoryPill, GradeBadge, Spinner, Stat } from './ui'
+
+/** A new-tab link keeps its URL in the bottom-left status bar until the pointer leaves.
+ * Drop it from hit testing on click so that preview clears immediately. */
+function dismissStatusPreview(event: MouseEvent<HTMLAnchorElement>) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  const link = event.currentTarget
+  link.blur()
+  if (event.detail === 0 || event.nativeEvent.pointerType === 'touch') return
+  link.style.pointerEvents = 'none'
+  const restore = () => {
+    link.style.pointerEvents = ''
+    document.removeEventListener('pointermove', onMove, true)
+  }
+  const onMove = (ev: PointerEvent) => {
+    if (!link.isConnected) {
+      document.removeEventListener('pointermove', onMove, true)
+      return
+    }
+    const rect = link.getBoundingClientRect()
+    const inside = ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom
+    if (!inside) restore()
+  }
+  document.addEventListener('pointermove', onMove, true)
+}
 
 /**
  * `card`: floating panel over the map (desktop). `sheet`: fills a mobile bottom sheet, which
  * already provides the rounded corners and shadow.
  */
 export function SchoolDetail({ variant = 'card' }: { variant?: 'card' | 'sheet' }) {
-  const { selected, select, recommendation, setMode, sendChat, chatLoading } = useStore()
+  const { selected, select, recommendation, origin } = useStore()
+  const [briefFor, setBriefFor] = useState<number | null>(null)
+  const [answer, setAnswer] = useState<string | null>(null)
+  const [briefError, setBriefError] = useState<string | null>(null)
+  const [briefLoading, setBriefLoading] = useState(false)
+  const requestSeq = useRef(0)
   if (!selected) return null
   const s = selected
+  const waiting = briefLoading && briefFor === s.id
+  const brief = briefFor === s.id ? answer : null
+  const error = briefFor === s.id ? briefError : null
 
   function askAi() {
-    if (chatLoading) return
-    const place = s.city ? ` in ${s.city}` : ''
-    setMode('match')
-    void sendChat(`Tell me about ${s.name}, a ${CATEGORY_META[s.category].label} school${place}.`, { preserveFilters: true })
+    if (waiting) return
+    const id = s.id
+    const seq = ++requestSeq.current
+    setBriefFor(id)
+    setAnswer(null)
+    setBriefError(null)
+    setBriefLoading(true)
+    void api
+      .askSchool(id, origin)
+      .then((result) => {
+        if (requestSeq.current !== seq) return
+        setAnswer(result.answer)
+      })
+      .catch((err: Error) => {
+        if (requestSeq.current !== seq) return
+        setBriefError(err.message || 'Could not get a description right now.')
+      })
+      .finally(() => {
+        if (requestSeq.current === seq) setBriefLoading(false)
+      })
   }
   const graded = s.category === 'public' || s.category === 'charter'
   const explanation = recommendation?.explanations.find((e) => e.school_id === s.id)
@@ -59,7 +109,7 @@ export function SchoolDetail({ variant = 'card' }: { variant?: 'card' | 'sheet' 
               </a>
             )}
             {s.website && (
-              <a href={s.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline">
+              <a href={s.website} target="_blank" rel="noreferrer" onClick={dismissStatusPreview} className="inline-flex items-center gap-1 text-brand-600 hover:underline">
                 <ExternalLink className="size-3" /> Website
               </a>
             )}
@@ -236,14 +286,25 @@ export function SchoolDetail({ variant = 'card' }: { variant?: 'card' | 'sheet' 
       </div>
 
       <div className="border-t border-slate-100 p-3">
+        {(waiting || brief || error) && (
+          <div className="scrollbar-thin mb-3 max-h-64 overflow-y-auto rounded-xl border border-brand-100 bg-brand-50 p-3 text-sm leading-relaxed text-slate-700">
+            {waiting && (
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <Spinner className="size-3" /> Reading this school's public record…
+              </div>
+            )}
+            {error && <p className="text-rose-700">{error}</p>}
+            {brief && <p className="whitespace-pre-wrap">{brief}</p>}
+          </div>
+        )}
         <button
           type="button"
           onClick={askAi}
-          disabled={chatLoading}
+          disabled={waiting}
           className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-2 py-2 text-xs font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
         >
           <Sparkles className="size-3.5" />
-          Ask AI
+          {waiting ? 'Asking…' : brief ? 'Ask again' : 'Ask AI'}
         </button>
       </div>
     </aside>

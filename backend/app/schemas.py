@@ -270,3 +270,14 @@ class HouseholdState(BaseModel):
     work: Optional[tuple[float, float]] = None
     work_label: Optional[str] = None
 
+
+class SchoolAskRequest(BaseModel):
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+
+
+class SchoolAskResponse(BaseModel):
+    school_id: int
+    answer: str
+    llm_used: bool
+
