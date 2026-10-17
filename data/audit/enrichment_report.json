@@ -1,0 +1,80 @@
+{
+  "generated_at": "2026-10-17T16:48:10.598165+00:00",
+  "integrated": {
+    "attendance_boundaries": {
+      "status": "integrated",
+      "records": 303,
+      "matched_schools": 283,
+      "unmatched_zones": 2,
+      "feature_modified_min": "2016-05-19",
+      "feature_modified_max": "2026-09-16",
+      "collected_at": "2026-10-17T16:26:29.963291+00:00",
+      "source": "https://gis.miamidade.gov/arcgis/rest/services/CommunityServices/MD_Educational/MapServer",
+      "license": "Miami-Dade County public ArcGIS service. Attribute Miami-Dade County GIS and M-DCPS School Operations."
+    },
+    "choice_and_magnet_programs": {
+      "status": "integrated",
+      "school_rows": 371,
+      "programs": 1093,
+      "matched_schools": 299,
+      "unmatched_schools": 3,
+      "unmatched_sample": [
+        {
+          "mdcps_id": "0361",
+          "name": "Biscayne Gardens Elementary"
+        },
+        {
+          "mdcps_id": "6091",
+          "name": "Citrus Grove Middle"
+        },
+        {
+          "mdcps_id": "0009",
+          "name": "Venetian Parc Academy"
+        }
+      ],
+      "missing_snapshot_files": [],
+      "collected_at": "2026-10-17T16:40:00+00:00",
+      "source": "https://yourchoicemiami.org/program-search",
+      "access": "Public catalog. Scripted clients get a Sucuri JavaScript challenge, which this pipeline does not solve. These rows were read in a browser.",
+      "license": "Attribute Miami-Dade County Public Schools. A listed program is not a promise of admission."
+    },
+    "private_school_directory": {
+      "status": "integrated",
+      "records": 687,
+      "matched_schools": 380,
+      "unmatched": 307,
+      "survey_year_2023_or_older_not_applied": 22,
+      "religious_yes_in_directory": 205,
+      "scholarship_participants_in_directory": 495,
+      "collected_at": "2026-10-17T16:26:42.721629+00:00",
+      "source": "https://www.floridaschoolchoice.org/information/privateschooldirectory/DownloadExcelFile.aspx",
+      "verification": "school-reported annual survey; Florida DOE does not verify accuracy Rows from 2023 or earlier stay in private_directory and are not copied onto school profiles.",
+      "not_tuition": "Scholarship participation is not a tuition amount."
+    }
+  },
+  "unavailable": [
+    {
+      "source": "Florida DCF CARES public search",
+      "url": "https://caressearch.myflfamilies.com/PublicSearch/",
+      "reason": "Every search requires a bearer token and a reCAPTCHA v3 token. Operating hours and inspection history were not collected."
+    },
+    {
+      "source": "DCF statewide child-care list",
+      "url": "https://www.myflfamilies.com/sites/default/files/2023-11/Public%20-%202023-11-1%20-%20Statewide.pdf",
+      "reason": "The public statewide file found is dated 2023-11-01 and has no operating hours. It was not ingested."
+    },
+    {
+      "source": "Tuition, bell times, bus routes, special-education catalog",
+      "reason": "No current bulk dataset was found in the time box. FLDOE alt_ese in this database is zero for every graded school, so it was not surfaced. Nothing was inferred from school names."
+    }
+  ],
+  "coverage": {
+    "schools": 2927,
+    "schools_with_attendance_zone": 283,
+    "schools_with_verified_program": 299,
+    "private_profiles_with_directory_facts": 377,
+    "school_reported_religious": 118,
+    "school_reported_not_religious": 259,
+    "scholarship_participants_on_profiles": 326
+  }
+}

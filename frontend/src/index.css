@@ -2,20 +2,31 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9eaff;
-  --color-brand-500: #2563eb;
-  --color-brand-600: #1d4ed8;
-  --color-brand-700: #1e40af;
-  --color-public: #2563eb;
+  --color-brand-50: #eef1ff;
+  --color-brand-100: #d9e0ff;
+  --color-brand-200: #b4c0ff;
+  --color-brand-500: #001ae6;
+  --color-brand-600: #0016c2;
+  --color-brand-700: #001098;
+  --color-accent: #00a8c6;
+  --color-public: #001ae6;
   --color-charter: #7c3aed;
   --color-private: #d97706;
   --color-early: #059669;
 }
 
 html, body, #root { height: 100%; }
-body { @apply bg-slate-50 text-slate-900 antialiased; }
+@supports (height: 100dvh) {
+  html, body, #root { height: 100dvh; }
+}
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  overscroll-behavior: none; /* keep pull-to-refresh from fighting the bottom sheet drag */
+  -webkit-tap-highlight-color: transparent;
+}
 
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
 
@@ -23,4 +34,18 @@ body { @apply bg-slate-50 text-slate-900 antialiased; }
 .marker-pulse::after {
   content: ""; position: absolute; inset: -4px; border-radius: 9999px;
   border: 2px solid currentColor; animation: pulse-ring 1.4s ease-out infinite;
+}
+
+gmp-place-autocomplete.location-autocomplete {
+  width: 100%;
+  color-scheme: light;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+  font: inherit;
+  font-size: 1rem; /* 16px stops iOS Safari from zooming the page on focus */
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+@media (min-width: 768px) {
+  gmp-place-autocomplete.location-autocomplete { font-size: 0.875rem; }
 }

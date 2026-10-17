@@ -36,10 +36,10 @@ export function Chip({ active, onClick, children, color }: { active: boolean; on
       onClick={onClick}
       className={clsx(
         'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition',
-        active ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50',
+        active ? 'border-brand-600 bg-brand-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50',
       )}
     >
-      {color && <span className="size-2 rounded-full" style={{ background: color, opacity: active ? 1 : 0.8 }} />}
+      {color && <span className={clsx('size-2 rounded-full', active && 'ring-2 ring-white')} style={{ background: color }} />}
       {children}
     </button>
   )

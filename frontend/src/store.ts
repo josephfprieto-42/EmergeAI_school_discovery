@@ -1,6 +1,31 @@
 import { create } from 'zustand'
 import { api } from './api'
-import type { AppConfig, Category, ChatMessage, CompareResponse, Origin, Preferences, RecommendResponse, School } from './types'
+import type { AppConfig, Category, ChatMessage, CompareResponse, Household, Origin, Preferences, RecommendResponse, School } from './types'
+
+const SESSION_KEY = 'schoolmatch.sessionId'
+const HOUSEHOLD_KEY = 'schoolmatch.householdId'
+const FAVORITES_KEY = 'schoolmatch.favorites'
+const DEFAULT_RADIUS_MILES = 5
+const OUTSIDE_COUNTY = 'Could not locate that place in Miami-Dade County'
+
+function outsideCounty(lat: number, lng: number, config: AppConfig | null): boolean {
+  const b = config?.bounds
+  if (!b) return false
+  return lat < b.south || lat > b.north || lng < b.west || lng > b.east
+}
+
+function samePoint(origin: Origin, lat: number, lng: number): boolean {
+  return Math.abs(origin.lat - lat) < 1e-5 && Math.abs(origin.lng - lng) < 1e-5
+}
+
+function loadFavoriteIds(): number[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]')
+    return Array.isArray(raw) ? raw.filter((id): id is number => typeof id === 'number') : []
+  } catch {
+    return []
+  }
+}
 
 export type PanelMode = 'explore' | 'match'
 
@@ -10,6 +35,10 @@ interface Filters {
   flGrades: string[]
   q: string
   radius: number | null
+  program: string | null
+  religious: boolean
+  scholarship: boolean
+  assigned: boolean
 }
 
 interface State {
@@ -28,6 +57,9 @@ interface State {
   setOrigin: (o: Origin | null) => void
   locate: (q: string) => Promise<void>
   locateError: string | null
+  setLocateError: (message: string | null) => void
+  rememberLocation: boolean
+  setRememberLocation: (remember: boolean) => Promise<void>
 
   schools: School[]
   schoolsLoading: boolean
@@ -38,6 +70,9 @@ interface State {
   select: (id: number | null) => Promise<void>
   hoverId: number | null
   setHover: (id: number | null) => void
+
+  favoriteIds: number[]
+  toggleFavorite: (id: number) => void
 
   compareIds: number[]
   toggleCompare: (id: number) => void
@@ -50,13 +85,39 @@ interface State {
 
   chat: ChatMessage[]
   chatLoading: boolean
+  chatHydrated: boolean
+  sessionId: string | null
   prefs: Preferences | null
   recommendation: RecommendResponse | null
-  sendChat: (message: string) => Promise<void>
-  resetChat: () => void
+  /** Facts about the family that outlive one chat: work, schedule, activities. */
+  householdId: string | null
+  household: Household | null
+  work: Origin | null
+  forgetHousehold: () => Promise<void>
+  sendChat: (message: string, options?: { preserveFilters?: boolean }) => Promise<void>
+  restoreSession: () => Promise<void>
+  resetChat: () => Promise<void>
 
   fitRequest: number
   requestFit: () => void
+
+  /** Height in px of UI covering the bottom of the map (mobile bottom sheet). 0 on desktop. */
+  mapInsetBottom: number
+  setMapInsetBottom: (px: number) => void
+}
+
+function applyChatFilters(set: (partial: (s: State) => Partial<State>) => void, prefs: Preferences, prev: Preferences | null) {
+  const grades = prefs.children?.map((c) => c.grade) ?? prefs.child_grades ?? []
+  const prevGrades = prev?.children?.map((c) => c.grade) ?? prev?.child_grades ?? []
+  const f: Partial<Filters> = {}
+  if (grades.length === 1) f.grade = grades[0]
+  else if (grades.length > 1) f.grade = null
+  else if (prevGrades.length > 0 || prev?.child_grade != null) f.grade = null
+  if (prefs.categories?.length) f.categories = prefs.categories
+  else if (prev?.categories?.length) f.categories = []
+  if (prefs.radius_miles) f.radius = prefs.radius_miles
+  else if (prev?.radius_miles) f.radius = null
+  set((s) => ({ filters: { ...s.filters, ...f } }))
 }
 
 let loadSeq = 0
@@ -71,7 +132,7 @@ export const useStore = create<State>((set, get) => ({
   mode: 'explore',
   setMode: (mode) => set({ mode }),
 
-  filters: { categories: [], grade: null, flGrades: [], q: '', radius: null },
+  filters: { categories: [], grade: null, flGrades: [], q: '', radius: null, program: null, religious: false, scholarship: false, assigned: false },
   setFilters: (f) => {
     set((s) => ({ filters: { ...s.filters, ...f } }))
     void get().loadSchools()
@@ -87,12 +148,44 @@ export const useStore = create<State>((set, get) => ({
 
   origin: null,
   locateError: null,
+  setLocateError: (locateError) => set({ locateError }),
+  rememberLocation: false,
+  setRememberLocation: async (rememberLocation) => {
+    set({ rememberLocation })
+    if (rememberLocation) return
+    const id = get().sessionId
+    if (!id) return
+    try {
+      await api.clearSessionOrigin(id)
+    } catch {
+      /* the session may not exist yet */
+    }
+  },
   setOrigin: (origin) => {
-    set({ origin, locateError: null })
+    if (origin && outsideCounty(origin.lat, origin.lng, get().config)) {
+      set({ locateError: OUTSIDE_COUNTY })
+      return
+    }
+    const sessionId = origin ? null : get().sessionId
+    set((s) => ({
+      origin,
+      locateError: null,
+      rememberLocation: origin ? s.rememberLocation : false,
+      filters: {
+        ...s.filters,
+        radius: origin ? (s.filters.radius ?? DEFAULT_RADIUS_MILES) : null,
+      },
+    }))
+    if (sessionId) {
+      void api.clearSessionOrigin(sessionId).catch(() => {
+        /* the session may not exist yet */
+      })
+    }
     void get().loadSchools()
     get().requestFit()
   },
   locate: async (q) => {
+    set({ locateError: null })
     try {
       const g = await api.geocode(q)
       get().setOrigin({ lat: g.lat, lng: g.lon, label: g.label })
@@ -116,6 +209,10 @@ export const useStore = create<State>((set, get) => ({
         lat: origin?.lat,
         lon: origin?.lng,
         radius: origin ? filters.radius : null,
+        program: filters.program,
+        religious: filters.religious,
+        scholarship: filters.scholarship,
+        assigned: origin ? filters.assigned : false,
       })
       if (seq === loadSeq) set({ schools: r.items, schoolsLoading: false })
     } catch {
@@ -141,6 +238,14 @@ export const useStore = create<State>((set, get) => ({
   },
   hoverId: null,
   setHover: (hoverId) => set({ hoverId }),
+
+  favoriteIds: loadFavoriteIds(),
+  toggleFavorite: (id) =>
+    set((s) => {
+      const favoriteIds = s.favoriteIds.includes(id) ? s.favoriteIds.filter((x) => x !== id) : [...s.favoriteIds, id]
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoriteIds))
+      return { favoriteIds }
+    }),
 
   compareIds: [],
   toggleCompare: (id) =>
@@ -171,33 +276,138 @@ export const useStore = create<State>((set, get) => ({
 
   chat: [],
   chatLoading: false,
+  chatHydrated: false,
+  sessionId: localStorage.getItem(SESSION_KEY),
   prefs: null,
   recommendation: null,
-  sendChat: async (message) => {
-    const { chat, prefs, origin } = get()
-    const history = chat
+  householdId: localStorage.getItem(HOUSEHOLD_KEY),
+  household: null,
+  work: null,
+  forgetHousehold: async () => {
+    const id = get().householdId
+    if (id) {
+      try {
+        await api.deleteHousehold(id)
+      } catch {
+        /* already gone */
+      }
+    }
+    localStorage.removeItem(HOUSEHOLD_KEY)
+    set({ householdId: null, household: null, work: null })
+  },
+  restoreSession: async () => {
+    const id = localStorage.getItem(SESSION_KEY)
+    const householdId = localStorage.getItem(HOUSEHOLD_KEY)
+    if (householdId) {
+      try {
+        const h = await api.household(householdId)
+        set({
+          householdId: h.household_id,
+          household: h.household,
+          work: h.work ? { lat: h.work[0], lng: h.work[1], label: h.work_label ?? h.household.work_location_text ?? 'Work' } : null,
+        })
+      } catch {
+        localStorage.removeItem(HOUSEHOLD_KEY)
+        set({ householdId: null, household: null, work: null })
+      }
+    }
+    if (!id) {
+      set({ sessionId: null, chatHydrated: true })
+      return
+    }
+    try {
+      const s = await api.session(id)
+      const origin = s.origin ? { lat: s.origin[0], lng: s.origin[1], label: s.origin_label ?? 'Your location' } : get().origin
+      set({
+        sessionId: s.session_id,
+        chat: s.messages,
+        prefs: s.preferences,
+        recommendation: s.recommendation,
+        origin,
+        rememberLocation: Boolean(s.origin),
+        chatHydrated: true,
+      })
+      if (s.household_id) {
+        localStorage.setItem(HOUSEHOLD_KEY, s.household_id)
+        set({ householdId: s.household_id, household: s.household ?? get().household })
+      }
+      applyChatFilters(set, s.preferences, null)
+      if (origin && get().filters.radius == null) {
+        set((state) => ({ filters: { ...state.filters, radius: DEFAULT_RADIUS_MILES } }))
+      }
+      if (s.recommendation || origin) get().requestFit()
+      void get().loadSchools()
+    } catch {
+      localStorage.removeItem(SESSION_KEY)
+      set({ sessionId: null, chat: [], prefs: null, recommendation: null, chatHydrated: true })
+    }
+  },
+  sendChat: async (message, options) => {
+    const { chat, origin, sessionId, filters, rememberLocation, householdId } = get()
     set({ chat: [...chat, { role: 'user', content: message }], chatLoading: true })
     try {
-      const r = await api.recommend({ message, history, preferences: prefs, origin: origin ? [origin.lat, origin.lng] : null, limit: 6 })
+      const r = await api.recommend({
+        message,
+        session_id: sessionId,
+        origin: origin ? [origin.lat, origin.lng] : null,
+        origin_label: origin?.label ?? null,
+        radius_miles: filters.radius,
+        remember_location: rememberLocation,
+        household_id: householdId,
+        limit: 6,
+      })
+      localStorage.setItem(SESSION_KEY, r.session_id)
+      if (r.household_id) localStorage.setItem(HOUSEHOLD_KEY, r.household_id)
+      const work = r.work ? { lat: r.work[0], lng: r.work[1], label: r.work_label ?? r.household?.work_location_text ?? 'Work' } : null
+      set({ householdId: r.household_id ?? householdId, household: r.household ?? null, work })
       const reply = r.follow_up ? `${r.summary}\n\n${r.follow_up}` : r.summary
-      set((s) => ({ chat: [...s.chat, { role: 'assistant', content: reply }], chatLoading: false, prefs: r.preferences, recommendation: r }))
-      if (r.origin && (!origin || Math.abs(origin.lat - r.origin[0]) > 1e-6 || Math.abs(origin.lng - r.origin[1]) > 1e-6)) {
-        set({ origin: { lat: r.origin[0], lng: r.origin[1], label: r.origin_label ?? 'Your location' } })
+      const prevPrefs = get().prefs
+      const nextOrigin = r.origin
+        ? {
+            lat: r.origin[0],
+            lng: r.origin[1],
+            label: origin && samePoint(origin, r.origin[0], r.origin[1]) ? origin.label : (r.origin_label ?? 'Your location'),
+          }
+        : null
+      const introducedOrigin = !origin && Boolean(nextOrigin)
+      set((s) => ({
+        chat: [...s.chat, { role: 'assistant', content: reply }],
+        chatLoading: false,
+        sessionId: r.session_id,
+        prefs: r.preferences,
+        recommendation: r,
+        origin: nextOrigin,
+      }))
+      if (!options?.preserveFilters) {
+        applyChatFilters(set, r.preferences, prevPrefs)
+        if (introducedOrigin && !r.preferences.radius_miles && get().filters.radius == null) {
+          set((s) => ({ filters: { ...s.filters, radius: DEFAULT_RADIUS_MILES } }))
+        }
       }
-      // Mirror extracted preferences into the explore filters so the map reflects them.
-      const f: Partial<Filters> = {}
-      if (r.preferences.child_grade != null) f.grade = r.preferences.child_grade
-      if (r.preferences.categories?.length) f.categories = r.preferences.categories
-      if (r.preferences.radius_miles) f.radius = r.preferences.radius_miles
-      set((s) => ({ filters: { ...s.filters, ...f } }))
       void get().loadSchools()
       get().requestFit()
     } catch (e) {
       set((s) => ({ chat: [...s.chat, { role: 'assistant', content: `Sorry, something went wrong: ${(e as Error).message}` }], chatLoading: false }))
     }
   },
-  resetChat: () => set({ chat: [], prefs: null, recommendation: null }),
+  resetChat: async () => {
+    const id = get().sessionId
+    if (id) {
+      try {
+        await api.deleteSession(id)
+      } catch {
+        /* the next message starts a new session either way */
+      }
+    }
+    localStorage.removeItem(SESSION_KEY)
+    set({ sessionId: null, chat: [], prefs: null, recommendation: null })
+  },
 
   fitRequest: 0,
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
+
+  mapInsetBottom: 0,
+  setMapInsetBottom: (px) => {
+    if (get().mapInsetBottom !== px) set({ mapInsetBottom: px })
+  },
 }))

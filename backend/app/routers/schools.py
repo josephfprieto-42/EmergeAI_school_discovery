@@ -24,6 +24,10 @@ def list_schools(
     lat: Optional[float] = None,
     lon: Optional[float] = None,
     radius: Optional[float] = Query(None, description="Miles; requires lat/lon"),
+    program: Optional[str] = Query(None, description="Verified theme or type: stem, arts, language, magnet, choice, gifted"),
+    religious: Optional[bool] = Query(None, description="School-reported religious schools from the Florida directory"),
+    scholarship: Optional[bool] = Query(None, description="School-reported state scholarship participants"),
+    assigned: Optional[bool] = Query(None, description="Only the attendance-zone school for lat/lon"),
     limit: int = Query(4000, le=5000),
 ):
     cats = category.split(",") if category else None
@@ -36,8 +40,15 @@ def list_schools(
         except ValueError as err:
             raise HTTPException(400, "bbox must be south,west,north,east") from err
     origin = (lat, lon) if lat is not None and lon is not None else None
-    rows = db.fetch_schools(con, categories=cats, grade=grade, fl_grades=fls, bbox=box, q=q, limit=limit)
+    rows = db.fetch_schools(
+        con, categories=cats, grade=grade, fl_grades=fls, bbox=box, q=q,
+        program=program, religious=True if religious else None,
+        scholarship=True if scholarship else None, limit=limit,
+    )
     items = [db.row_to_school(r, origin) for r in rows]
+    db.annotate_assignments(con, items, origin)
+    if assigned and origin:
+        items = [i for i in items if i.get("assigned_zones")]
     if origin and radius:
         items = [i for i in items if i["distance_miles"] is not None and i["distance_miles"] <= radius]
     if origin:
@@ -51,4 +62,7 @@ def get_school(school_id: int, con=Depends(get_con), lat: Optional[float] = None
     if not row:
         raise HTTPException(404, "School not found")
     origin = (lat, lon) if lat is not None and lon is not None else None
-    return db.row_to_school(row, origin)
+    school = db.row_to_school(row, origin)
+    db.attach_offerings(con, [school])
+    db.annotate_assignments(con, [school], origin)
+    return school

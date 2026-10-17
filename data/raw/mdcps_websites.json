@@ -1,0 +1,1722 @@
+{
+  "source": "https://mdcpswebapps2.dadeschools.net/api/schools/{number}?details=true",
+  "checked_at": "2026-10-17T16:02:29.758400+00:00",
+  "rule": "Directory web field, stored only when GET of that URL returns HTTP 2xx.",
+  "schools": [
+    {
+      "mdcps_id": "0041",
+      "website": "https://externalweb.dadeschools.net/?web=abe",
+      "name": "AIR BASE K-8 CTR INT'L EDUC"
+    },
+    {
+      "mdcps_id": "0071",
+      "website": "https://externalweb.dadeschools.net/?web=ebt",
+      "name": "EUGENIA B. THOMAS K-8 CENTER"
+    },
+    {
+      "mdcps_id": "0081",
+      "website": "https://externalweb.dadeschools.net/?web=lbs",
+      "name": "LENORA B. SMITH ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0091",
+      "website": "https://externalweb.dadeschools.net/?web=bgec",
+      "name": "BOB GRAHAM EDUCATION CTR"
+    },
+    {
+      "mdcps_id": "0092",
+      "website": "http://sib.dadeschools.net",
+      "name": "NORMAN S. EDELCUP/SUNNY ISLES"
+    },
+    {
+      "mdcps_id": "0101",
+      "website": "https://arcolalake.dadeschools.net/",
+      "name": "ARCOLA LAKE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0111",
+      "website": "https://externalweb.dadeschools.net/?web=maya",
+      "name": "MAYA ANGELOU ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0121",
+      "website": "https://externalweb.dadeschools.net/?web=auburndale",
+      "name": "AUBURNDALE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0122",
+      "website": "https://externalweb.dadeschools.net/?web=drek8",
+      "name": "DR ROLANDO ESPINOSA K-8"
+    },
+    {
+      "mdcps_id": "0125",
+      "website": "https://externalweb.dadeschools.net/?web=bossard",
+      "name": "NORMA BUTLER BOSSARD ELEM"
+    },
+    {
+      "mdcps_id": "0161",
+      "website": "https://externalweb.dadeschools.net/?web=avo",
+      "name": "AVOCADO ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0201",
+      "website": "https://externalweb.dadeschools.net/?web=banel",
+      "name": "BANYAN ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0211",
+      "website": "https://externalweb.dadeschools.net/?web=mcbe",
+      "name": "DR. MANUEL C. BARREIRO ELEM"
+    },
+    {
+      "mdcps_id": "0231",
+      "website": "https://externalweb.dadeschools.net/?web=awat",
+      "name": "AVENTURA WATERWAYS K-8 CENTER"
+    },
+    {
+      "mdcps_id": "0241",
+      "website": "http://rkbk8.dadeschools.net",
+      "name": "RUTH K BROAD/BAY HARBOR K-8"
+    },
+    {
+      "mdcps_id": "0251",
+      "website": "https://externalweb.dadeschools.net/?web=beckham",
+      "name": "ETHEL KOGER BECKHAM K-8 CENTER"
+    },
+    {
+      "mdcps_id": "0261",
+      "website": "https://externalweb.dadeschools.net/?web=baes",
+      "name": "BEL-AIRE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0271",
+      "website": "https://externalweb.dadeschools.net/?web=benttree",
+      "name": "BENT TREE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0311",
+      "website": "https://externalweb.dadeschools.net/?web=goulds",
+      "name": "GOULDS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0321",
+      "website": "http://biscayne.dadeschools.net",
+      "name": "BISCAYNE BEACH ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0331",
+      "website": "http://cpn.dadeschools.net",
+      "name": "CHAPMAN PARTNERSHIP ECC NORTH"
+    },
+    {
+      "mdcps_id": "0341",
+      "website": "https://externalweb.dadeschools.net/?web=ace",
+      "name": "ARCH CREEK ELEMENTARY SCHOOL"
+    },
+    {
+      "mdcps_id": "0351",
+      "website": "http://cps.dadeschools.net",
+      "name": "CHAPMAN PARTNERSHIP ECC SOUTH"
+    },
+    {
+      "mdcps_id": "0401",
+      "website": "https://externalweb.dadeschools.net/?web=veb",
+      "name": "VAN E. BLANTON ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0441",
+      "website": "https://externalweb.dadeschools.net/?web=bluelakeselementary",
+      "name": "BLUE LAKES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0451",
+      "website": "https://externalweb.dadeschools.net/?web=dragonsk8",
+      "name": "BOWMAN ASHE/DOOLIN K-8 ACAD"
+    },
+    {
+      "mdcps_id": "0461",
+      "website": "https://externalweb.dadeschools.net/?web=brentwood",
+      "name": "BRENTWOOD ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0481",
+      "website": "https://externalweb.dadeschools.net/?web=bright",
+      "name": "JAMES H. BRIGHT/JW JOHNSON ES"
+    },
+    {
+      "mdcps_id": "0521",
+      "website": "http://broadmoor.dadeschools.net",
+      "name": "BROADMOOR ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0561",
+      "website": "https://externalweb.dadeschools.net/?web=wjbryan",
+      "name": "W.J. BRYAN ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0641",
+      "website": "https://externalweb.dadeschools.net/?web=bun",
+      "name": "BUNCHE PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0651",
+      "website": "http://campbelldrive.dadeschools.net",
+      "name": "CAMPBELL DRIVE K-8 CENTER"
+    },
+    {
+      "mdcps_id": "0661",
+      "website": "https://externalweb.dadeschools.net/?web=cari",
+      "name": "CARIBBEAN K-8 CENTER"
+    },
+    {
+      "mdcps_id": "0671",
+      "website": "https://externalweb.dadeschools.net/?web=calusa",
+      "name": "CALUSA ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0681",
+      "website": "http://carolcitye.dadeschools.net",
+      "name": "CAROL CITY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0721",
+      "website": "https://externalweb.dadeschools.net/?web=littlecarver",
+      "name": "GEORGE WASHINGTON CARVER ELEM"
+    },
+    {
+      "mdcps_id": "0761",
+      "website": "https://externalweb.dadeschools.net/?web=fienbergfisherk8",
+      "name": "MIAMI BEACH FIENBERG/FISHER K8"
+    },
+    {
+      "mdcps_id": "0771",
+      "website": "https://externalweb.dadeschools.net/?web=wachapman",
+      "name": "WILLIAM A. CHAPMAN ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0801",
+      "website": "https://externalweb.dadeschools.net/?web=cgc",
+      "name": "CITRUS GROVE K-8 CENTER"
+    },
+    {
+      "mdcps_id": "0831",
+      "website": "https://externalweb.dadeschools.net/?web=claudepepper",
+      "name": "CLAUDE PEPPER ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0841",
+      "website": "https://externalweb.dadeschools.net/?web=ccges",
+      "name": "COCONUT GROVE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0861",
+      "website": "https://externalweb.dadeschools.net/?web=jmp",
+      "name": "JOHNNIE M PARRIS COLONIAL DR."
+    },
+    {
+      "mdcps_id": "0881",
+      "website": "http://comstockelementary.dadeschools.net",
+      "name": "COMSTOCK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "0921",
+      "website": "https://nkc.dadeschools.net",
+      "name": "NEVA KING COOPER EDUCATIONAL"
+    },
+    {
+      "mdcps_id": "0961",
+      "website": "https://externalweb.dadeschools.net/?web=cpga",
+      "name": "CORAL GABLES PREPARATORY ACAD"
+    },
+    {
+      "mdcps_id": "1001",
+      "website": "https://externalweb.dadeschools.net/?web=cpe",
+      "name": "CORAL PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1041",
+      "website": "https://externalweb.dadeschools.net/?web=coralreefe",
+      "name": "CORAL REEF ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1081",
+      "website": "https://externalweb.dadeschools.net/?web=cte",
+      "name": "CORAL TERRACE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1121",
+      "website": "https://www.coralwayk8center.com/",
+      "name": "CORAL WAY K-8 CENTER"
+    },
+    {
+      "mdcps_id": "1161",
+      "website": "https://externalweb.dadeschools.net/?web=cvwe",
+      "name": "CRESTVIEW ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1241",
+      "website": "https://externalweb.dadeschools.net/?web=cutlerridgeelem",
+      "name": "CUTLER RIDGE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1281",
+      "website": "http://cypress.dadeschools.net",
+      "name": "CYPRESS K-8 CENTER"
+    },
+    {
+      "mdcps_id": "1331",
+      "website": "https://externalweb.dadeschools.net/?web=dev",
+      "name": "DEVON AIRE K-8 CENTER"
+    },
+    {
+      "mdcps_id": "1361",
+      "website": "http://frederickdouglass.dadeschools.net",
+      "name": "FREDERICK DOUGLASS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1371",
+      "website": "https://externalweb.dadeschools.net/?web=msdouglas",
+      "name": "MARJORY STONEMAN DOUGLAS ELEM"
+    },
+    {
+      "mdcps_id": "1401",
+      "website": "https://externalweb.dadeschools.net/?web=drew",
+      "name": "DR. CHARLES R. DREW K-8 CENTER"
+    },
+    {
+      "mdcps_id": "1441",
+      "website": "https://externalweb.dadeschools.net/?web=dunbar",
+      "name": "PAUL LAURENCE DUNBAR K-8 CTR"
+    },
+    {
+      "mdcps_id": "1481",
+      "website": "http://jgd.dadeschools.net",
+      "name": "JOHN G. DUPUIS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1521",
+      "website": "https://externalweb.dadeschools.net/?web=aearhart",
+      "name": "AMELIA EARHART ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1561",
+      "website": "http://earlingtonheightselem.dadeschools.net",
+      "name": "EARLINGTON HEIGHTS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1601",
+      "website": "https://externalweb.dadeschools.net/?web=edisonpark",
+      "name": "EDISON PARK K-8 CENTER"
+    },
+    {
+      "mdcps_id": "1641",
+      "website": "https://emersonelementary.net/",
+      "name": "EMERSON ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1681",
+      "website": "https://externalweb.dadeschools.net/?web=lcevans",
+      "name": "LILLIE C. EVANS K-8 CENTER"
+    },
+    {
+      "mdcps_id": "1691",
+      "website": "https://externalweb.dadeschools.net/?web=cmegators",
+      "name": "CHRISTINA M. EVE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1721",
+      "website": "https://externalweb.dadeschools.net/?web=ever",
+      "name": "EVERGLADES K-8 CENTER"
+    },
+    {
+      "mdcps_id": "1761",
+      "website": "http://davidfairchild.dadeschools.net",
+      "name": "DAVID FAIRCHILD ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1801",
+      "website": "https://externalweb.dadeschools.net/?web=fair",
+      "name": "FAIRLAWN ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1811",
+      "website": "https://externalweb.dadeschools.net/?web=dbfe",
+      "name": "DANTE B. FASCELL ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1841",
+      "website": "https://externalweb.dadeschools.net/?web=fla",
+      "name": "FLAGAMI ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1881",
+      "website": "http://hmf.dadeschools.net",
+      "name": "HENRY M. FLAGLER ELEMENTARY"
+    },
+    {
+      "mdcps_id": "1921",
+      "website": "http://flamingo.dadeschools.net",
+      "name": "FLAMINGO ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2001",
+      "website": "https://externalweb.dadeschools.net/?web=floridacityes",
+      "name": "FLORIDA CITY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2021",
+      "website": "https://externalweb.dadeschools.net/?web=gfe",
+      "name": "GLORIA FLOYD ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2041",
+      "website": "https://externalweb.dadeschools.net/?web=benfranklink8",
+      "name": "BENJAMIN FRANKLIN K-8 CENTER"
+    },
+    {
+      "mdcps_id": "2081",
+      "website": "https://externalweb.dadeschools.net/?web=fulf",
+      "name": "FULFORD ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2111",
+      "website": "https://externalweb.dadeschools.net/?web=hialeahgardens",
+      "name": "HIALEAH GARDENS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2151",
+      "website": "https://externalweb.dadeschools.net/?web=jdg",
+      "name": "JACK D. GORDON ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2161",
+      "website": "https://externalweb.dadeschools.net/?web=goldengladeselementary",
+      "name": "GOLDEN GLADES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2181",
+      "website": "https://externalweb.dadeschools.net/?web=joella",
+      "name": "JOELLA C. GOOD ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2191",
+      "website": "http://sle.dadeschools.net",
+      "name": "SPANISH LAKE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2241",
+      "website": "https://externalweb.dadeschools.net/?web=gratigny",
+      "name": "GRATIGNY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2261",
+      "website": "http://greenglade.dadeschools.net",
+      "name": "GREENGLADE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2281",
+      "website": "http://greynolds.dadeschools.net",
+      "name": "GREYNOLDS PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2321",
+      "website": "https://externalweb.dadeschools.net/?web=gulfstreamelm",
+      "name": "GULFSTREAM ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2331",
+      "website": "https://externalweb.dadeschools.net/?web=crhadley",
+      "name": "CHARLES R. HADLEY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2341",
+      "website": "http://joehall.dadeschools.net",
+      "name": "JOE HALL ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2351",
+      "website": "https://externalweb.dadeschools.net/?web=eneida",
+      "name": "ENEIDA MASSAS HARTNER ELEM"
+    },
+    {
+      "mdcps_id": "2361",
+      "website": "https://externalweb.dadeschools.net/?web=hes",
+      "name": "LINCOLN DIAZ-BALART HIALEAH ES"
+    },
+    {
+      "mdcps_id": "2371",
+      "website": "https://externalweb.dadeschools.net/?web=whg",
+      "name": "WEST HIALEAH GARDENS ELEM"
+    },
+    {
+      "mdcps_id": "2401",
+      "website": "https://externalweb.dadeschools.net/?web=hibiscus",
+      "name": "HIBISCUS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2441",
+      "website": "http://vabhoe.dadeschools.net",
+      "name": "VIRGINIA A BOONE/HIGHLAND OAKS"
+    },
+    {
+      "mdcps_id": "2501",
+      "website": "https://api.dadeschools.net/schoolwebsite/#!/?schoolId=2501",
+      "name": "HOLMES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2511",
+      "website": "https://externalweb.dadeschools.net/?web=znhe",
+      "name": "ZORA NEALE HURSTON ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2521",
+      "website": "http://hoover.dadeschools.net",
+      "name": "OLIVER HOOVER ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2531",
+      "website": "https://api.dadeschools.net/schoolwebsite/#!/?schoolId=2531",
+      "name": "THENA C. CROWDER EARLY CHLDHD"
+    },
+    {
+      "mdcps_id": "2541",
+      "website": "https://externalweb.dadeschools.net/?web=howarddriveelementary",
+      "name": "HOWARD DRIVE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2581",
+      "website": "http://mik8.dadeschools.net",
+      "name": "MADIE IVES K-8 PREP ACADEMY"
+    },
+    {
+      "mdcps_id": "2641",
+      "website": "https://externalweb.dadeschools.net/?web=kendale",
+      "name": "KENDALE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2651",
+      "website": "https://externalweb.dadeschools.net/?web=kle",
+      "name": "KENDALE LAKES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2661",
+      "website": "https://externalweb.dadeschools.net/?web=kpe",
+      "name": "KENSINGTON PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2701",
+      "website": "http://kenwood.dadeschools.net",
+      "name": "KENWOOD K-8 CENTER"
+    },
+    {
+      "mdcps_id": "2741",
+      "website": "https://externalweb.dadeschools.net/?web=kbk8c",
+      "name": "KEY BISCAYNE K-8 CENTER"
+    },
+    {
+      "mdcps_id": "2781",
+      "website": "https://externalweb.dadeschools.net/?web=kpel",
+      "name": "KINLOCH PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2801",
+      "website": "https://api.dadeschools.net/schoolwebsite/#!/?schoolId=2801",
+      "name": "LAKE STEVENS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2821",
+      "website": "https://externalweb.dadeschools.net/?web=lakeviewelementary",
+      "name": "LAKEVIEW ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2881",
+      "website": "https://externalweb.dadeschools.net/?web=leewood",
+      "name": "LEEWOOD K-8 CENTER"
+    },
+    {
+      "mdcps_id": "2891",
+      "website": "https://externalweb.dadeschools.net/?web=williamlehman",
+      "name": "WILLIAM LEHMAN ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2901",
+      "website": "https://externalweb.dadeschools.net/?web=lcc",
+      "name": "LEISURE CITY K-8 CENTER"
+    },
+    {
+      "mdcps_id": "2911",
+      "website": "http://llk-8.dadeschools.net",
+      "name": "LINDA LENTIN K-8 CENTER"
+    },
+    {
+      "mdcps_id": "2941",
+      "website": "https://externalweb.dadeschools.net/?web=lcse",
+      "name": "LAURA C. SAUNDERS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "2981",
+      "website": "https://api.dadeschools.net/schoolwebsite/#!/?schoolId=2981",
+      "name": "LIBERTY CITY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3001",
+      "website": "https://api.dadeschools.net/schoolwebsite/#!/?schoolId=3001",
+      "name": "WEST LAKES PREPARATORY ACADEMY"
+    },
+    {
+      "mdcps_id": "3021",
+      "website": "https://externalweb.dadeschools.net/?web=jmccrary",
+      "name": "JESSE J MCCRARY JR ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3031",
+      "website": "http://ksk8.dadeschools.net",
+      "name": "KENDALL SQUARE K-8 CENTER"
+    },
+    {
+      "mdcps_id": "3041",
+      "website": "http://lpe.dadeschools.net",
+      "name": "LORAH PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3051",
+      "website": "https://externalweb.dadeschools.net/?web=toussaint",
+      "name": "TOUSSAINT LOUVERTURE ELEM"
+    },
+    {
+      "mdcps_id": "3061",
+      "website": "https://externalweb.dadeschools.net/?web=ludlamelem",
+      "name": "LUDLAM ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3101",
+      "website": "https://externalweb.dadeschools.net/?web=fcmk8",
+      "name": "FRANK C. MARTIN K-8 CENTER"
+    },
+    {
+      "mdcps_id": "3111",
+      "website": "https://externalweb.dadeschools.net/?web=wmes",
+      "name": "WESLEY MATTHEWS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3141",
+      "website": "https://externalweb.dadeschools.net/?web=meadowlane",
+      "name": "MEADOWLANE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3181",
+      "website": "https://externalweb.dadeschools.net/?web=mel",
+      "name": "MELROSE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3191",
+      "website": "https://externalweb.dadeschools.net/?web=adamerrittk",
+      "name": "ADA MERRITT K-8 CENTER"
+    },
+    {
+      "mdcps_id": "3241",
+      "website": "https://externalweb.dadeschools.net/?web=mgardens",
+      "name": "MIAMI GARDENS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3261",
+      "website": "https://externalweb.dadeschools.net/?web=mhelem",
+      "name": "MIAMI HEIGHTS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3281",
+      "website": "https://externalweb.dadeschools.net/?web=mlk8center",
+      "name": "MIAMI LAKES K-8 CENTER"
+    },
+    {
+      "mdcps_id": "3341",
+      "website": "https://externalweb.dadeschools.net/?web=miamishoreselementary",
+      "name": "MIAMI SHORES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3381",
+      "website": "http://mse.dadeschools.net",
+      "name": "MIAMI SPRINGS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3421",
+      "website": "https://externalweb.dadeschools.net/?web=milam",
+      "name": "M.A. MILAM K-8 CENTER"
+    },
+    {
+      "mdcps_id": "3431",
+      "website": "https://externalweb.dadeschools.net/?web=phyllisrmiller",
+      "name": "PHYLLIS RUTH MILLER ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3501",
+      "website": "http://morningside.dadeschools.net",
+      "name": "MORNINGSIDE K-8 ACADEMY"
+    },
+    {
+      "mdcps_id": "3581",
+      "website": "https://externalweb.dadeschools.net/?web=myrtlegrovek8center",
+      "name": "MYRTLE GROVE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3621",
+      "website": "https://externalweb.dadeschools.net/?web=cpk8",
+      "name": "COCONUT PALM K-8 ACADEMY"
+    },
+    {
+      "mdcps_id": "3661",
+      "website": "http://nbe.dadeschools.net",
+      "name": "NATURAL BRIDGE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3701",
+      "website": "https://externalweb.dadeschools.net/?web=norlandelem",
+      "name": "NORLAND ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3741",
+      "website": "https://externalweb.dadeschools.net/?web=northbeachelementary",
+      "name": "NORTH BEACH ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3781",
+      "website": "https://externalweb.dadeschools.net/?web=bhe",
+      "name": "BARBARA HAWKINS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3821",
+      "website": "http://northcounty.dadeschools.net",
+      "name": "NORTH COUNTY K-8 CENTER"
+    },
+    {
+      "mdcps_id": "3861",
+      "website": "https://externalweb.dadeschools.net/?web=nges",
+      "name": "NORTH GLADE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3881",
+      "website": "https://externalweb.dadeschools.net/?web=acpa",
+      "name": "ANDREA CASTILLO PREP K-8"
+    },
+    {
+      "mdcps_id": "3901",
+      "website": "https://externalweb.dadeschools.net/?web=nhes",
+      "name": "NORTH HIALEAH ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3941",
+      "website": "https://externalweb.dadeschools.net/?web=nmes",
+      "name": "NORTH MIAMI ELEMENTARY"
+    },
+    {
+      "mdcps_id": "3981",
+      "website": "https://externalweb.dadeschools.net/?web=ntlelementary",
+      "name": "NORTH TWIN LAKES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4001",
+      "website": "https://externalweb.dadeschools.net/?web=norwood",
+      "name": "NORWOOD ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4011",
+      "website": "https://externalweb.dadeschools.net/?web=dtb",
+      "name": "DR. TONI BILBAO PREP ACADEMY"
+    },
+    {
+      "mdcps_id": "4021",
+      "website": "http://oakgrovelementary.dadeschools.net",
+      "name": "OAK GROVE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4031",
+      "website": "https://externalweb.dadeschools.net/?web=gatewayk8",
+      "name": "GATEWAY ENVIRONMENTAL K-8"
+    },
+    {
+      "mdcps_id": "4061",
+      "website": "https://externalweb.dadeschools.net/?web=ojus",
+      "name": "OJUS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4071",
+      "website": "https://externalweb.dadeschools.net/?web=olinda",
+      "name": "AGENORIA S. PASCHAL/OLINDA EL"
+    },
+    {
+      "mdcps_id": "4081",
+      "website": "https://www3.dadeschools.net/SchoolInformation/school/4081/details",
+      "name": "PRIMARY LEARNING CENTER"
+    },
+    {
+      "mdcps_id": "4091",
+      "website": "https://externalweb.dadeschools.net/?web=olympia",
+      "name": "OLYMPIA HEIGHTS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4121",
+      "website": "https://externalweb.dadeschools.net/?web=drrbi",
+      "name": "DR. ROBERT B. INGRAM EL"
+    },
+    {
+      "mdcps_id": "4171",
+      "website": "https://externalweb.dadeschools.net/?web=orchardvillaelementaryschool",
+      "name": "ORCHARD VILLA ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4221",
+      "website": "https://externalweb.dadeschools.net/?web=pes",
+      "name": "PALMETTO ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4241",
+      "website": "https://externalweb.dadeschools.net/?web=ple",
+      "name": "PALM LAKES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4261",
+      "website": "https://externalweb.dadeschools.net/?web=palmsprings",
+      "name": "PALM SPRINGS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4281",
+      "website": "https://externalweb.dadeschools.net/?web=psn",
+      "name": "PALM SPRINGS NORTH K-8 CENTER"
+    },
+    {
+      "mdcps_id": "4301",
+      "website": "https://parkview.dadeschools.net/",
+      "name": "PARKVIEW EDUCATIONAL CENTER"
+    },
+    {
+      "mdcps_id": "4341",
+      "website": "https://externalweb.dadeschools.net/?web=pwe",
+      "name": "PARKWAY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4381",
+      "website": "http://perrineelementary.dadeschools.net",
+      "name": "DR HENRY E PERRINE ACADEMY"
+    },
+    {
+      "mdcps_id": "4391",
+      "website": "http://peskoe.dadeschools.net",
+      "name": "IRVING & BEATRICE PESKOE K-8"
+    },
+    {
+      "mdcps_id": "4401",
+      "website": "https://externalweb.dadeschools.net/?web=cfitelson",
+      "name": "KELSEY L. PHARR ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4421",
+      "website": "https://externalweb.dadeschools.net/?web=pinecrest",
+      "name": "PINECREST ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4441",
+      "website": "https://externalweb.dadeschools.net/?web=pinelake",
+      "name": "PINE LAKE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4491",
+      "website": "https://externalweb.dadeschools.net/?web=henryreeves",
+      "name": "HENRY E S REEVES K-8 CTR"
+    },
+    {
+      "mdcps_id": "4501",
+      "website": "https://www.dadeschools.net/404",
+      "name": "POINCIANA PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4511",
+      "website": "https://externalweb.dadeschools.net/?web=drglpelementary",
+      "name": "DR.GILBERT L. PORTER ELEM"
+    },
+    {
+      "mdcps_id": "4541",
+      "website": "https://externalweb.dadeschools.net/?web=rainbowpark",
+      "name": "RAINBOW PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4581",
+      "website": "https://externalweb.dadeschools.net/?web=redlandelem",
+      "name": "REDLAND ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4611",
+      "website": "https://api.dadeschools.net/schoolwebsite/#!/?schoolId=4611",
+      "name": "REDONDO ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4681",
+      "website": "https://externalweb.dadeschools.net/?web=riversideelementary",
+      "name": "RIVERSIDE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4691",
+      "website": "https://externalweb.dadeschools.net/?web=jsr",
+      "name": "JANE ROBERTS K-8 CENTER"
+    },
+    {
+      "mdcps_id": "4721",
+      "website": "https://externalweb.dadeschools.net/?web=rockwayelementary",
+      "name": "ROCKWAY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4741",
+      "website": "https://externalweb.dadeschools.net/?web=royalgreenelementary",
+      "name": "ROYAL GREEN ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4761",
+      "website": "https://externalweb.dadeschools.net/?web=rpalm",
+      "name": "ROYAL PALM ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4801",
+      "website": "https://externalweb.dadeschools.net/?web=gkesp",
+      "name": "GERTRUDE EDELMAN/SABAL PALM EL"
+    },
+    {
+      "mdcps_id": "4841",
+      "website": "http://santaclara.dadeschools.net",
+      "name": "SANTA CLARA ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4881",
+      "website": "https://externalweb.dadeschools.net/?web=scottlake",
+      "name": "SCOTT LAKE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "4921",
+      "website": "https://externalweb.dadeschools.net/?web=seminole",
+      "name": "SEMINOLE ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5001",
+      "website": "https://externalweb.dadeschools.net/?web=ses",
+      "name": "SHENANDOAH ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5003",
+      "website": "https://externalweb.dadeschools.net/?web=sdm",
+      "name": "SOUTH DADE MIDDLE SCHOOL"
+    },
+    {
+      "mdcps_id": "5005",
+      "website": "http://dlk8.dadeschools.net",
+      "name": "DAVID LAWRENCE JR K-8 CENTER"
+    },
+    {
+      "mdcps_id": "5021",
+      "website": "https://externalweb.dadeschools.net/?web=bensheppard",
+      "name": "BEN SHEPPARD ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5041",
+      "website": "https://externalweb.dadeschools.net/?web=silverbluff",
+      "name": "SILVER BLUFF ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5051",
+      "website": "https://externalweb.dadeschools.net/?web=erg",
+      "name": "ERNEST R GRAHAM K-8 ACADEMY"
+    },
+    {
+      "mdcps_id": "5061",
+      "website": "https://externalweb.dadeschools.net/?web=cjfinlay",
+      "name": "DR. CARLOS J FINLAY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5081",
+      "website": "https://externalweb.dadeschools.net/?web=skywayelementary",
+      "name": "DR FREDERICA S WILSON/SKYWAY"
+    },
+    {
+      "mdcps_id": "5091",
+      "website": "https://externalweb.dadeschools.net/?web=mbsp",
+      "name": "MIAMI BEACH SOUTH POINTE ELEM"
+    },
+    {
+      "mdcps_id": "5101",
+      "website": "https://externalweb.dadeschools.net/?web=jis",
+      "name": "JOHN I. SMITH K-8 CENTER"
+    },
+    {
+      "mdcps_id": "5121",
+      "website": "https://externalweb.dadeschools.net/?web=snappercreek",
+      "name": "SNAPPER CREEK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5131",
+      "website": "https://externalweb.dadeschools.net/?web=cml",
+      "name": "N. DADE CTR FOR MODERN LANG"
+    },
+    {
+      "mdcps_id": "5141",
+      "website": "https://externalweb.dadeschools.net/?web=hubertosibley",
+      "name": "HUBERT O. SIBLEY K-8 ACADEMY"
+    },
+    {
+      "mdcps_id": "5201",
+      "website": "http://she.dadeschools.net",
+      "name": "SOUTH HIALEAH ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5241",
+      "website": "https://externalweb.dadeschools.net/?web=smk8",
+      "name": "SOUTH MIAMI K-8 CENTER"
+    },
+    {
+      "mdcps_id": "5281",
+      "website": "https://externalweb.dadeschools.net/?web=smhe",
+      "name": "SOUTH MIAMI HEIGHTS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5321",
+      "website": "https://externalweb.dadeschools.net/?web=southside",
+      "name": "SOUTHSIDE PREPARATORY ACADEMY"
+    },
+    {
+      "mdcps_id": "5361",
+      "website": "http://svelem.dadeschools.net",
+      "name": "SPRINGVIEW ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5381",
+      "website": "https://externalweb.dadeschools.net/?web=stirrupelementary",
+      "name": "E.W.F. STIRRUP ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5401",
+      "website": "https://externalweb.dadeschools.net/?web=sunset",
+      "name": "SUNSET ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5421",
+      "website": "https://externalweb.dadeschools.net/?web=spe",
+      "name": "SUNSET PARK ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5431",
+      "website": "http://sweetwaterelementary.dadeschools.net",
+      "name": "SWEETWATER ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5441",
+      "website": "https://externalweb.dadeschools.net/?web=syl",
+      "name": "SYLVANIA HEIGHTS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5481",
+      "website": "https://api.dadeschools.net/schoolwebsite/#!/?schoolId=5481",
+      "name": "TREASURE ISLAND ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5521",
+      "website": "http://tropical.dadeschools.net",
+      "name": "TROPICAL ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5561",
+      "website": "https://externalweb.dadeschools.net/?web=tuckereagles",
+      "name": "FRANCES S. TUCKER K-8 CENTER"
+    },
+    {
+      "mdcps_id": "5601",
+      "website": "https://externalweb.dadeschools.net/?web=tles",
+      "name": "TWIN LAKES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5641",
+      "website": "https://externalweb.dadeschools.net/?web=vge",
+      "name": "VILLAGE GREEN ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5671",
+      "website": "https://externalweb.dadeschools.net/?web=vinelandk8",
+      "name": "VINELAND K-8 CENTER"
+    },
+    {
+      "mdcps_id": "5711",
+      "website": "https://externalweb.dadeschools.net/?web=mws",
+      "name": "MAE WALTERS ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5791",
+      "website": "https://externalweb.dadeschools.net/?web=westhomesteadk",
+      "name": "WEST HOMESTEAD K-8 CENTER"
+    },
+    {
+      "mdcps_id": "5831",
+      "website": "https://externalweb.dadeschools.net/?web=westlab",
+      "name": "HENRY S. WEST LABORATORY SCHL"
+    },
+    {
+      "mdcps_id": "5861",
+      "website": "http://wlre.dadeschools.net",
+      "name": "DR H W MACK/W LITTLE RIVER K8"
+    },
+    {
+      "mdcps_id": "5901",
+      "website": "https://externalweb.dadeschools.net/?web=stingerterritory",
+      "name": "CARRIE P MEEK/WESTVIEW K-8 CTR"
+    },
+    {
+      "mdcps_id": "5931",
+      "website": "http://pwes.dadeschools.net",
+      "name": "PHILLIS WHEATLEY ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5951",
+      "website": "https://externalweb.dadeschools.net/?web=wpines",
+      "name": "WHISPERING PINES ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5961",
+      "website": "https://externalweb.dadeschools.net/?web=winstonpark",
+      "name": "WINSTON PARK K-8 CENTER"
+    },
+    {
+      "mdcps_id": "5971",
+      "website": "https://externalweb.dadeschools.net/?web=nbyoung",
+      "name": "NATHAN YOUNG ELEMENTARY"
+    },
+    {
+      "mdcps_id": "5981",
+      "website": "http://whigham.dadeschools.net",
+      "name": "DR. EDWARD L. WHIGHAM ELEM"
+    },
+    {
+      "mdcps_id": "5991",
+      "website": "https://externalweb.dadeschools.net/?web=cdwyche",
+      "name": "CHARLES DAVID WYCHE JR ELEM"
+    },
+    {
+      "mdcps_id": "6001",
+      "website": "https://externalweb.dadeschools.net/?web=ammons",
+      "name": "HERBERT A. AMMONS MIDDLE"
+    },
+    {
+      "mdcps_id": "6011",
+      "website": "https://externalweb.dadeschools.net/?web=gjams",
+      "name": "GEORGIA JONES-AYERS/LBSMITH K8"
+    },
+    {
+      "mdcps_id": "6021",
+      "website": "https://externalweb.dadeschools.net/?web=arvida",
+      "name": "ARVIDA MIDDLE SCHOOL"
+    },
+    {
+      "mdcps_id": "6023",
+      "website": "https://externalweb.dadeschools.net/?web=andover",
+      "name": "ANDOVER MIDDLE SCHOOL"
+    },
+    {
+      "mdcps_id": "6031",
+      "website": "https://brownsvillemiddle.net/",
+      "name": "BROWNSVILLE MIDDLE"
+    },
+    {
+      "mdcps_id": "6041",
+      "website": "https://externalweb.dadeschools.net/?web=pwbell",
+      "name": "PAUL W. BELL MIDDLE"
+    },
+    {
+      "mdcps_id": "6051",
+      "website": "https://externalweb.dadeschools.net/?web=carolcitymiddle",
+      "name": "CAROL CITY MIDDLE"
+    },
+    {
+      "mdcps_id": "6052",
+      "website": "http://mas.dadeschools.net",
+      "name": "MIAMI ARTS STUDIO 6-12 @ZELDA"
+    },
+    {
+      "mdcps_id": "6071",
+      "website": "https://externalweb.dadeschools.net/?web=gwcm",
+      "name": "GEORGE WASHINGTON CARVER MID."
+    },
+    {
+      "mdcps_id": "6081",
+      "website": "https://externalweb.dadeschools.net/?web=cutlerbaysenior",
+      "name": "CUTLER BAY SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "6111",
+      "website": "https://externalweb.dadeschools.net/?web=cbm",
+      "name": "CUTLER BAY MIDDLE"
+    },
+    {
+      "mdcps_id": "6121",
+      "website": "https://externalweb.dadeschools.net/?web=dario",
+      "name": "RUBEN DARIO MIDDLE"
+    },
+    {
+      "mdcps_id": "6161",
+      "website": "https://externalweb.dadeschools.net/?web=lawtonchilesmiddle",
+      "name": "LAWTON CHILES MIDDLE SCHOOL"
+    },
+    {
+      "mdcps_id": "6171",
+      "website": "https://externalweb.dadeschools.net/?web=filer",
+      "name": "HENRY H. FILER MIDDLE"
+    },
+    {
+      "mdcps_id": "6211",
+      "website": "http://gladesmiddle.dadeschools.net",
+      "name": "GLADES MIDDLE"
+    },
+    {
+      "mdcps_id": "6221",
+      "website": "https://externalweb.dadeschools.net/?web=hammocks",
+      "name": "HAMMOCKS MIDDLE"
+    },
+    {
+      "mdcps_id": "6231",
+      "website": "https://externalweb.dadeschools.net/?web=hialeahmiddleschool",
+      "name": "HIALEAH MIDDLE"
+    },
+    {
+      "mdcps_id": "6241",
+      "website": "https://externalweb.dadeschools.net/?web=hom",
+      "name": "HIGHLAND OAKS MIDDLE"
+    },
+    {
+      "mdcps_id": "6251",
+      "website": "https://externalweb.dadeschools.net/?web=homesteadmiddle",
+      "name": "HOMESTEAD MIDDLE"
+    },
+    {
+      "mdcps_id": "6281",
+      "website": "https://externalweb.dadeschools.net/?web=jefferson",
+      "name": "THOMAS JEFFERSON BISCAYNE GDNS"
+    },
+    {
+      "mdcps_id": "6301",
+      "website": "https://externalweb.dadeschools.net/?web=jfk",
+      "name": "JOHN F. KENNEDY MIDDLE"
+    },
+    {
+      "mdcps_id": "6331",
+      "website": "https://externalweb.dadeschools.net/?web=kpms",
+      "name": "KINLOCH PARK MIDDLE"
+    },
+    {
+      "mdcps_id": "6351",
+      "website": "https://externalweb.dadeschools.net/?web=lsm",
+      "name": "LAKE STEVENS MIDDLE"
+    },
+    {
+      "mdcps_id": "6361",
+      "website": "https://externalweb.dadeschools.net/?web=jddms",
+      "name": "JOSE DE DIEGO MIDDLE SCHOOL"
+    },
+    {
+      "mdcps_id": "6391",
+      "website": "https://externalweb.dadeschools.net/?web=madisonmiddle",
+      "name": "MADISON MIDDLE SCHOOL"
+    },
+    {
+      "mdcps_id": "6411",
+      "website": "http://hmms.dadeschools.net",
+      "name": "HORACE MANN MIDDLE"
+    },
+    {
+      "mdcps_id": "6441",
+      "website": "https://externalweb.dadeschools.net/?web=hdmcmillan",
+      "name": "HOWARD D. MCMILLAN MIDDLE"
+    },
+    {
+      "mdcps_id": "6501",
+      "website": "https://externalweb.dadeschools.net/?web=mlms",
+      "name": "MIAMI LAKES MIDDLE"
+    },
+    {
+      "mdcps_id": "6521",
+      "website": "https://externalweb.dadeschools.net/?web=msms",
+      "name": "MIAMI SPRINGS MIDDLE"
+    },
+    {
+      "mdcps_id": "6541",
+      "website": "https://externalweb.dadeschools.net/?web=nautilus",
+      "name": "MIAMI BEACH NAUTILUS MIDDLE"
+    },
+    {
+      "mdcps_id": "6571",
+      "website": "https://externalweb.dadeschools.net/?web=nms",
+      "name": "NORLAND MIDDLE"
+    },
+    {
+      "mdcps_id": "6591",
+      "website": "https://externalweb.dadeschools.net/?web=ndms",
+      "name": "NORTH DADE MIDDLE"
+    },
+    {
+      "mdcps_id": "6631",
+      "website": "https://externalweb.dadeschools.net/?web=nmiamid",
+      "name": "NORTH MIAMI MIDDLE"
+    },
+    {
+      "mdcps_id": "6681",
+      "website": "https://externalweb.dadeschools.net/?web=palmspringsmiddle",
+      "name": "PALM SPRINGS MIDDLE"
+    },
+    {
+      "mdcps_id": "6701",
+      "website": "http://pms.dadeschools.net",
+      "name": "PALMETTO MIDDLE"
+    },
+    {
+      "mdcps_id": "6741",
+      "website": "https://externalweb.dadeschools.net/?web=ponce",
+      "name": "PONCE DE LEON MIDDLE"
+    },
+    {
+      "mdcps_id": "6751",
+      "website": "http://hgms.dadeschools.net",
+      "name": "HIALEAH GARDENS MIDDLE SCHOOL"
+    },
+    {
+      "mdcps_id": "6761",
+      "website": "https://externalweb.dadeschools.net/?web=redlandmiddleschool",
+      "name": "REDLAND MIDDLE"
+    },
+    {
+      "mdcps_id": "6771",
+      "website": "https://externalweb.dadeschools.net/?web=jmcmiddle",
+      "name": "JORGE MAS CANOSA MIDDLE"
+    },
+    {
+      "mdcps_id": "6801",
+      "website": "https://externalweb.dadeschools.net/?web=riviera",
+      "name": "RIVIERA MIDDLE"
+    },
+    {
+      "mdcps_id": "6821",
+      "website": "https://externalweb.dadeschools.net/?web=rockway",
+      "name": "ROCKWAY MIDDLE"
+    },
+    {
+      "mdcps_id": "6841",
+      "website": "https://externalweb.dadeschools.net/?web=shenandoahmiddle",
+      "name": "SHENANDOAH MIDDLE"
+    },
+    {
+      "mdcps_id": "6861",
+      "website": "http://southwoodmiddle.dadeschools.net",
+      "name": "SOUTHWOOD MIDDLE"
+    },
+    {
+      "mdcps_id": "6881",
+      "website": "https://externalweb.dadeschools.net/?web=smmcs",
+      "name": "SOUTH MIAMI MIDDLE SCHOOL"
+    },
+    {
+      "mdcps_id": "6901",
+      "website": "https://externalweb.dadeschools.net/?web=wrthomas",
+      "name": "W. R. THOMAS MIDDLE"
+    },
+    {
+      "mdcps_id": "6921",
+      "website": "https://externalweb.dadeschools.net/?web=lamarlouisecurry",
+      "name": "LAMAR LOUISE CURRY MIDDLE SCH"
+    },
+    {
+      "mdcps_id": "6961",
+      "website": "https://wmms.dadeschools.net",
+      "name": "WEST MIAMI MIDDLE"
+    },
+    {
+      "mdcps_id": "7001",
+      "website": "http://mdo.dadeschools.net",
+      "name": "MIAMI-DADE ONLINE ACADEMY 7001"
+    },
+    {
+      "mdcps_id": "7004",
+      "website": "https://mdvs.dadeschools.net/#!",
+      "name": "MIAMI-DADE VIRTUAL SCHOOL"
+    },
+    {
+      "mdcps_id": "7005",
+      "website": "https://externalweb.dadeschools.net/?web=itech",
+      "name": "ITECH @ THOMAS EDISON EDUC CTR"
+    },
+    {
+      "mdcps_id": "7008",
+      "website": "https://externalweb.dadeschools.net/?web=biotech",
+      "name": "BIOTECH @RICHMOND HEIGHTS 6-12"
+    },
+    {
+      "mdcps_id": "7011",
+      "website": "https://externalweb.dadeschools.net/?web=american",
+      "name": "AMERICAN SENIOR"
+    },
+    {
+      "mdcps_id": "7021",
+      "website": "https://externalweb.dadeschools.net/?web=cie",
+      "name": "CENTER FOR INTERNATIONAL EDUC"
+    },
+    {
+      "mdcps_id": "7029",
+      "website": "https://externalweb.dadeschools.net/?web=terra",
+      "name": "TERRA ENVIRONMENTAL RESEARCH"
+    },
+    {
+      "mdcps_id": "7031",
+      "website": "http://mastfiu.dadeschools.net",
+      "name": "MAST @ FIU BISCAYNE BAY CAMPUS"
+    },
+    {
+      "mdcps_id": "7033",
+      "website": "https://externalweb.dadeschools.net/?web=schoolofjustice",
+      "name": "LAW ENFORCEMENT OFFICERS HS"
+    },
+    {
+      "mdcps_id": "7048",
+      "website": "https://externalweb.dadeschools.net/?web=atmourning",
+      "name": "ALONZO & TRACY MOURNING SH"
+    },
+    {
+      "mdcps_id": "7049",
+      "website": "https://externalweb.dadeschools.net/?web=westlandwildcats",
+      "name": "WESTLAND HIALEAH SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7051",
+      "website": "https://externalweb.dadeschools.net/?web=ghbraddock",
+      "name": "G. HOLMES BRADDOCK SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7055",
+      "website": "https://ywpa.dadeschools.net",
+      "name": "YOUNG WOMEN'S PREPARATORY ACAD"
+    },
+    {
+      "mdcps_id": "7056",
+      "website": "http://ympa.dadeschools.net",
+      "name": "YOUNG MENS PREPARATORY ACADEMY"
+    },
+    {
+      "mdcps_id": "7061",
+      "website": "https://externalweb.dadeschools.net/?web=sas",
+      "name": "SCHOOL FOR ADVANCED STUDIES NO"
+    },
+    {
+      "mdcps_id": "7071",
+      "website": "https://externalweb.dadeschools.net/?web=cghs",
+      "name": "CORAL GABLES SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7073",
+      "website": "https://externalweb.dadeschools.net/?web=aaa",
+      "name": "ACADEMY FOR ADVANCED ACADEMICS"
+    },
+    {
+      "mdcps_id": "7081",
+      "website": "https://externalweb.dadeschools.net/?web=dashschool",
+      "name": "DESIGN & ARCHITECTURE SENIOR"
+    },
+    {
+      "mdcps_id": "7091",
+      "website": "https://externalweb.dadeschools.net/?web=sas",
+      "name": "SCHOOL FOR ADV STUDIES SOUTH"
+    },
+    {
+      "mdcps_id": "7101",
+      "website": "http://coralreef.dadeschools.net",
+      "name": "CORAL REEF SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7111",
+      "website": "https://externalweb.dadeschools.net/?web=hhs",
+      "name": "HIALEAH SENIOR"
+    },
+    {
+      "mdcps_id": "7121",
+      "website": "https://externalweb.dadeschools.net/?web=ferguson",
+      "name": "JOHN A FERGUSON SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7131",
+      "website": "https://externalweb.dadeschools.net/?web=hml",
+      "name": "HIALEAH-MIAMI LAKES SENIOR"
+    },
+    {
+      "mdcps_id": "7141",
+      "website": "http://mkhs.dadeschools.net",
+      "name": "DR MICHAEL M KROP SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7151",
+      "website": "https://externalweb.dadeschools.net/?web=hshs",
+      "name": "HOMESTEAD SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7161",
+      "website": "http://mast.dadeschools.net",
+      "name": "MARITIME & SCIENCE TECH ACAD"
+    },
+    {
+      "mdcps_id": "7171",
+      "website": "http://mastmedical.dadeschools.net",
+      "name": "MED ACAD SCIENCE & TECHNOLOGY"
+    },
+    {
+      "mdcps_id": "7191",
+      "website": "https://externalweb.dadeschools.net/?web=hghsgladiators",
+      "name": "HIALEAH GARDENS SENIOR"
+    },
+    {
+      "mdcps_id": "7201",
+      "website": "https://externalweb.dadeschools.net/?web=mbsh",
+      "name": "MIAMI BEACH SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7231",
+      "website": "https://externalweb.dadeschools.net/?web=mccshs",
+      "name": "MIAMI CAROL CITY SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7241",
+      "website": "https://externalweb.dadeschools.net/?web=rrdshs",
+      "name": "RONALD W REAGAN/DORAL SENIOR"
+    },
+    {
+      "mdcps_id": "7251",
+      "website": "https://api.dadeschools.net/schoolwebsite/#!/?schoolId=7251",
+      "name": "MIAMI CENTRAL SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7261",
+      "website": "https://externalweb.dadeschools.net/?web=sas",
+      "name": "SCHL FOR ADVANCED STUDIES WEST"
+    },
+    {
+      "mdcps_id": "7271",
+      "website": "http://ramtech59.dadeschools.net",
+      "name": "MIAMI CORAL PARK SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7291",
+      "website": "http://martimast.dadeschools.net",
+      "name": "JOSE MARTI MAST 6-12 ACADEMY"
+    },
+    {
+      "mdcps_id": "7301",
+      "website": "https://externalweb.dadeschools.net/?web=edison",
+      "name": "MIAMI EDISON SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7341",
+      "website": "http://generals.dadeschools.net",
+      "name": "MIAMI JACKSON SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7351",
+      "website": "https://externalweb.dadeschools.net/?web=apmc",
+      "name": "ARTHUR & POLLY MAYS COA K-12"
+    },
+    {
+      "mdcps_id": "7361",
+      "website": "http://killian.dadeschools.net",
+      "name": "MIAMI KILLIAN SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7371",
+      "website": "https://externalweb.dadeschools.net/?web=whitsreadingroom",
+      "name": "ROBERT MORGAN EDUCATIONAL CTR"
+    },
+    {
+      "mdcps_id": "7381",
+      "website": "http://mnorland.dadeschools.net",
+      "name": "MIAMI NORLAND SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7391",
+      "website": "http://mlec.dadeschools.net",
+      "name": "MIAMI LAKES EDUCATIONAL CENTER"
+    },
+    {
+      "mdcps_id": "7411",
+      "website": "https://externalweb.dadeschools.net/?web=northwestern",
+      "name": "MIAMI NORTHWESTERN SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7431",
+      "website": "https://externalweb.dadeschools.net/?web=mpsh",
+      "name": "MIAMI PALMETTO SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7459",
+      "website": "https://externalweb.dadeschools.net/?web=iprepnorth",
+      "name": "IPREP ACADEMY NORTH"
+    },
+    {
+      "mdcps_id": "7461",
+      "website": "https://externalweb.dadeschools.net/?web=mhs",
+      "name": "MIAMI SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7511",
+      "website": "https://externalweb.dadeschools.net/?web=miamisprings",
+      "name": "MIAMI SPRINGS 6-12 PREP ACAD."
+    },
+    {
+      "mdcps_id": "7531",
+      "website": "https://externalweb.dadeschools.net/?web=sunsethigh",
+      "name": "MIAMI SUNSET SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7541",
+      "website": "http://nmb.dadeschools.net",
+      "name": "NORTH MIAMI BEACH SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7551",
+      "website": "https://externalweb.dadeschools.net/?web=sas",
+      "name": "SCHOOL FOR ADV STUDIES-HOMESTD"
+    },
+    {
+      "mdcps_id": "7571",
+      "website": "http://ispa.dadeschools.net",
+      "name": "INTL STUDIES PREP ACADEMY"
+    },
+    {
+      "mdcps_id": "7581",
+      "website": "https://externalweb.dadeschools.net/?web=iprepacademy",
+      "name": "IPREPARATORY ACADEMY"
+    },
+    {
+      "mdcps_id": "7591",
+      "website": "https://externalweb.dadeschools.net/?web=nmshpioneers",
+      "name": "NORTH MIAMI SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7601",
+      "website": "https://turnertech.dadeschools.net",
+      "name": "WILLIAM H. TURNER TECHNICAL"
+    },
+    {
+      "mdcps_id": "7631",
+      "website": "http://macarthursouth.dadeschools.net",
+      "name": "MIAMI MACARTHUR EDUC CENTER"
+    },
+    {
+      "mdcps_id": "7641",
+      "website": "https://externalweb.dadeschools.net/?web=jcbdoralthunder",
+      "name": "JC BERMUDEZ DORAL SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7701",
+      "website": "https://externalweb.dadeschools.net/?web=sdshs",
+      "name": "SOUTH DADE SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7721",
+      "website": "http://smsh.dadeschools.net",
+      "name": "SOUTH MIAMI SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7731",
+      "website": "http://miamisouthridge.dadeschools.net",
+      "name": "MIAMI SOUTHRIDGE SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7741",
+      "website": "https://externalweb.dadeschools.net/?web=sweagles",
+      "name": "SOUTHWEST MIAMI SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7751",
+      "website": "https://externalweb.dadeschools.net/?web=barbaragolemansenior",
+      "name": "BARBARA GOLEMAN SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7781",
+      "website": "https://externalweb.dadeschools.net/?web=varelahs",
+      "name": "FELIX VARELA SENIOR HIGH"
+    },
+    {
+      "mdcps_id": "7791",
+      "website": "https://externalweb.dadeschools.net/?web=btw",
+      "name": "BOOKER T. WASHINGTON SR. HIGH"
+    },
+    {
+      "mdcps_id": "7901",
+      "website": "https://externalweb.dadeschools.net/?web=nwsa",
+      "name": "NEW WORLD SCHOOL OF THE ARTS"
+    },
+    {
+      "mdcps_id": "8016",
+      "website": "https://tap.dadeschools.net",
+      "name": "TAP PROGRAM FACILITIES"
+    },
+    {
+      "mdcps_id": "8017",
+      "website": "https://externalweb.dadeschools.net/?web=eaop",
+      "name": "ALTERNATIVE OUTREACH PROGRAM"
+    },
+    {
+      "mdcps_id": "8019",
+      "website": "http://ace.dadeschools.net",
+      "name": "DR. MARVIN DUNN ACAD COMM EDUC"
+    },
+    {
+      "mdcps_id": "8021",
+      "website": "https://www3.dadeschools.net/SchoolInformation/school/8021/details",
+      "name": "TITLE I MIGRANT EDUC PROGRAM"
+    },
+    {
+      "mdcps_id": "8101",
+      "website": "http://janmann.dadeschools.net",
+      "name": "JAN MANN EDUCATIONAL CENTER"
+    },
+    {
+      "mdcps_id": "8121",
+      "website": "http://copecenternorth.dadeschools.net",
+      "name": "COPE CENTER NORTH"
+    },
+    {
+      "mdcps_id": "8131",
+      "website": "https://www.dmwcopecenter.org/",
+      "name": "DOROTHY M WALLACE COPE CENTER"
+    },
+    {
+      "mdcps_id": "8141",
+      "website": "https://externalweb.dadeschools.net/?web=jesconiers",
+      "name": "JUVENILE JUSTICE CENTER"
+    },
+    {
+      "mdcps_id": "8151",
+      "website": "https://externalweb.dadeschools.net/?web=rrec",
+      "name": "ROBERT RENICK EDUCATION CTR"
+    },
+    {
+      "mdcps_id": "8181",
+      "website": "https://externalweb.dadeschools.net/?web=rok",
+      "name": "RUTH OWENS KRUSE' EDUC CENTER"
+    },
+    {
+      "mdcps_id": "8261",
+      "website": "https://www3.dadeschools.net/SchoolInformation/school/8261/details",
+      "name": "K-12 DISTANCE LEARNING"
+    },
+    {
+      "mdcps_id": "9013",
+      "website": "https://www3.dadeschools.net/SchoolInformation/school/9013/details",
+      "name": "PRE K - INTERVENTION"
+    },
+    {
+      "mdcps_id": "9731",
+      "website": "https://www3.dadeschools.net/SchoolInformation/school/9731/details",
+      "name": "EARLY CHILDHOOD, ESE AND TITLE"
+    },
+    {
+      "mdcps_id": "9732",
+      "website": "http://merrick.dadeschools.net",
+      "name": "BRUCIE BALL EDUCATIONAL CENTER"
+    }
+  ]
+}

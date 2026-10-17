@@ -5,6 +5,11 @@ Inputs (data/raw/):
       Miami-Dade County Open Data (ArcGIS) point layers
   nces_directory.json   NCES CCD directory for LEA 1200390 via Urban Institute API
   SchoolGrades26.xlsx   Florida DOE 2025-26 School Grades (statewide; filtered to district 13)
+  mdcps_websites.json   Official public-school websites from the M-DCPS directory.
+                        Each URL was kept only after a GET of that URL returned HTTP 2xx.
+  mdcps_programs.json   Magnet and parent-choice programs from yourchoicemiami.org.
+  crdc_academics.json   2021-22 CRDC AP, IB, and gifted enrollment via the Urban Institute.
+  fhsaa_sports.json     FHSAA interscholastic sports for member high schools.
 
 Only values present in the sources are stored. Missing values are NULL.
 """
@@ -17,6 +22,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import identity
+import offerings
 import openpyxl
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -103,6 +110,11 @@ SCHEMA = """
 DROP TABLE IF EXISTS schools;
 DROP TABLE IF EXISTS school_grades;
 DROP TABLE IF EXISTS school_stats;
+DROP TABLE IF EXISTS school_programs;
+DROP TABLE IF EXISTS school_academics;
+DROP TABLE IF EXISTS school_sports;
+DROP TABLE IF EXISTS school_sources;
+DROP TABLE IF EXISTS review_flags;
 DROP TABLE IF EXISTS schools_fts;
 
 CREATE TABLE schools (
@@ -120,11 +132,45 @@ CREATE TABLE schools (
   year_established INTEGER, coed TEXT,
   license_number TEXT, license_expires TEXT,
   status TEXT,
-  region TEXT
+  region TEXT,
+  identity_key TEXT,
+  campus_key TEXT,
+  campus_label TEXT,
+  sources TEXT,
+  after_school_care INTEGER NOT NULL DEFAULT 0,   -- 1 when a county-licensed after-school provider operates on this campus
+  after_school_care_names TEXT                    -- JSON list of those provider names
 );
 CREATE INDEX idx_schools_cat ON schools(category);
 CREATE INDEX idx_schools_latlon ON schools(lat, lon);
 CREATE INDEX idx_schools_mdcps ON schools(mdcps_id);
+CREATE INDEX idx_schools_identity ON schools(identity_key);
+CREATE INDEX idx_schools_campus ON schools(campus_key);
+
+CREATE TABLE school_sources (
+  id INTEGER PRIMARY KEY,
+  school_id INTEGER NOT NULL REFERENCES schools(id),
+  source TEXT NOT NULL,
+  source_id TEXT,
+  name TEXT,
+  address TEXT,
+  match_method TEXT
+);
+CREATE INDEX idx_school_sources_school ON school_sources(school_id);
+
+CREATE TABLE review_flags (
+  id INTEGER PRIMARY KEY,
+  left_source TEXT NOT NULL,
+  left_source_id TEXT,
+  left_name TEXT,
+  left_address TEXT,
+  right_source TEXT NOT NULL,
+  right_source_id TEXT,
+  right_name TEXT,
+  right_address TEXT,
+  relation TEXT NOT NULL,
+  score REAL,
+  reason TEXT NOT NULL
+);
 
 CREATE TABLE school_grades (
   school_id INTEGER PRIMARY KEY REFERENCES schools(id),
@@ -154,6 +200,38 @@ CREATE TABLE school_stats (
   nces_grade_low INTEGER, nces_grade_high INTEGER
 );
 
+CREATE TABLE school_programs (
+  id INTEGER PRIMARY KEY,
+  school_id INTEGER NOT NULL REFERENCES schools(id),
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,             -- magnet | choice
+  test_required INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL
+);
+CREATE INDEX idx_school_programs_school ON school_programs(school_id);
+
+CREATE TABLE school_academics (
+  school_id INTEGER PRIMARY KEY REFERENCES schools(id),
+  year INTEGER NOT NULL,
+  ap_enrollment INTEGER,
+  ap_math INTEGER,
+  ap_science INTEGER,
+  ap_compsci INTEGER,
+  ap_language INTEGER,
+  ap_other INTEGER,
+  ib_enrollment INTEGER,
+  gifted_enrollment INTEGER
+);
+
+CREATE TABLE school_sports (
+  id INTEGER PRIMARY KEY,
+  school_id INTEGER NOT NULL REFERENCES schools(id),
+  sport TEXT NOT NULL,
+  team TEXT,                      -- Boys, Girls, or blank when the directory has no split
+  source TEXT NOT NULL
+);
+CREATE INDEX idx_school_sports_school ON school_sports(school_id);
+
 CREATE VIRTUAL TABLE schools_fts USING fts5(name, address, city, content='schools', content_rowid='id');
 """
 
@@ -166,134 +244,431 @@ def insert_school(cur: sqlite3.Cursor, row: dict) -> int:
     cols = ",".join(row.keys())
     qs = ",".join("?" for _ in row)
     cur.execute(f"INSERT INTO schools ({cols}) VALUES ({qs})", list(row.values()))
-    return cur.lastrowid
+    return int(cur.lastrowid)
 
 
-def ingest_mdc(cur: sqlite3.Cursor) -> dict[str, int]:
-    """Insert all MDC layers. Returns {mdcps_id: school_id} for public+charter joins."""
-    by_mdcps: dict[str, int] = {}
-    counts: dict[str, int] = {}
+_AFTERSCHOOL = re.compile(r"after[\s-]?school|all[\s-]?stars|after[\s-]?care|before and after", re.I)
 
-    # Charter first so overlapping IDs resolve to the charter record.
-    charter_ids: set[str] = set()
-    for f in load_features("mdc_charter.json"):
+
+def program_kind_for(name: str | None, subtype: str) -> str:
+    text = name or ""
+    if subtype in {"head_start", "early_head_start"}:
+        return "headstart"
+    if subtype == "primary_learning_center" or re.search(r"\bPLC\b", text, re.I):
+        return "plc"
+    if _AFTERSCHOOL.search(text) or (re.search(r"\bymca\b", text, re.I) and re.search(r"elementary|middle|senior|high|k-8", text, re.I)):
+        return "afterschool"
+    if subtype == "daycare":
+        return "daycare"
+    return "school"
+
+
+def make_record(kind: str, campus_label: str | None = None, exclude_reason: str | None = None, **row) -> identity.Record:
+    return identity.Record(
+        source=row["source"],
+        source_id=str(row.get("source_id") or ""),
+        name=row.get("name") or "",
+        category=row.get("category") or "",
+        subtype=row.get("subtype") or "",
+        program_kind=kind,
+        lat=row.get("lat"),
+        lon=row.get("lon"),
+        mdcps_id=row.get("mdcps_id"),
+        address=row.get("address"),
+        city=row.get("city"),
+        zip=row.get("zip"),
+        phone=row.get("phone"),
+        website=row.get("website"),
+        grade_low=row.get("grade_low"),
+        grade_high=row.get("grade_high"),
+        grades_text=row.get("grades_text"),
+        enrollment=row.get("enrollment"),
+        capacity=row.get("capacity"),
+        year_established=row.get("year_established"),
+        coed=row.get("coed"),
+        license_number=row.get("license_number"),
+        license_expires=row.get("license_expires"),
+        status=row.get("status"),
+        region=row.get("region"),
+        campus_label=campus_label,
+        exclude_reason=exclude_reason,
+    )
+
+
+def _keep(publishable: list[identity.Record], excluded: list[identity.Record], record: identity.Record) -> None:
+    if record.exclude_reason or record.lat is None or record.lon is None:
+        if record.exclude_reason is None:
+            record.exclude_reason = "missing_coordinates"
+        excluded.append(record)
+    else:
+        publishable.append(record)
+
+
+def collect_mdc() -> tuple[list[identity.Record], list[identity.Record], dict[str, int]]:
+    """Load MDC layers. Identity resolution decides which rows become one school."""
+    publishable: list[identity.Record] = []
+    excluded: list[identity.Record] = []
+    raw: dict[str, int] = {}
+
+    features = load_features("mdc_charter.json")
+    raw["mdc_gis_charter"] = len(features)
+    for f in features:
         a = f["attributes"]
-        if not a.get("LAT") or not a.get("LON"):
-            continue
         mid = str(a.get("ID") or "").strip().zfill(4) if a.get("ID") else None
         lo, hi = parse_grade_span(a.get("GRADE"))
-        sid = insert_school(cur, dict(
+        name = clean(a.get("NAME")) or ""
+        row = dict(
             source="mdc_gis_charter", source_id=str(a["OBJECTID"]), mdcps_id=mid,
-            name=clean(a["NAME"]), category="charter", subtype="charter",
+            name=name, category="charter", subtype="charter",
             address=clean(a.get("ADDRESS")), city=clean(a.get("CITY")), zip=str(a.get("ZIPCODE") or "") or None,
             phone=clean(a.get("PHONE")), website=norm_site(a.get("WEBSITE")),
-            lat=a["LAT"], lon=a["LON"], grade_low=lo, grade_high=hi, grades_text=clean(a.get("GRADE")),
+            lat=a.get("LAT"), lon=a.get("LON"), grade_low=lo, grade_high=hi, grades_text=clean(a.get("GRADE")),
             enrollment=to_int(a.get("ENROLLMNT")), capacity=to_int(a.get("CAPACITY")),
             year_established=None, coed=None, license_number=None, license_expires=None,
             status="Active", region=None,
-        ))
-        if mid:
-            by_mdcps[mid] = sid
-            charter_ids.add(mid)
-        counts["charter"] = counts.get("charter", 0) + 1
+        )
+        reason = None if a.get("LAT") and a.get("LON") else "missing_coordinates"
+        _keep(publishable, excluded, make_record(program_kind_for(name, "charter"), clean(a.get("CAMPUS")), reason, **row))
 
     subtype_by_type = {
         "E": "traditional", "M": "traditional", "S": "traditional", "U": "traditional",
         "ALT": "alternative", "SPC": "special_center", "PLC": "primary_learning_center",
     }
-    for f in load_features("mdc_public.json"):
+    features = load_features("mdc_public.json")
+    raw["mdc_gis_public"] = len(features)
+    for f in features:
         a = f["attributes"]
         t = clean(a.get("TYPE"))
-        if t in {"A", "O"}:  # administrative buildings, adult/technical education
-            continue
-        if not a.get("LAT") or not a.get("LON"):
-            continue
-        mid = str(a.get("ID") or "").strip().zfill(4) if a.get("ID") else None
-        if mid and mid in charter_ids:
-            continue
-        name = clean(a["NAME"]) or ""
+        name = clean(a.get("NAME")) or ""
         subtype = subtype_by_type.get(t or "", "traditional")
         if "virtual" in name.lower():
             subtype = "virtual"
+        mid = str(a.get("ID") or "").strip().zfill(4) if a.get("ID") else None
         lo, hi = parse_grade_span(a.get("GRADES"))
-        sid = insert_school(cur, dict(
+        row = dict(
             source="mdc_gis_public", source_id=str(a["OBJECTID"]), mdcps_id=mid,
             name=name, category="public", subtype=subtype,
             address=clean(a.get("ADDRESS")), city=clean(a.get("CITY")), zip=str(a.get("ZIPCODE") or "") or None,
             phone=clean(a.get("PHONE")), website=None,
-            lat=a["LAT"], lon=a["LON"], grade_low=lo, grade_high=hi,
+            lat=a.get("LAT"), lon=a.get("LON"), grade_low=lo, grade_high=hi,
             grades_text=clean(a.get("GRADES")) if clean(a.get("GRADES")) != "0" else None,
             enrollment=to_int(a.get("ENROLLMNT")), capacity=to_int(a.get("CAPACITY")),
             year_established=None, coed=None, license_number=None, license_expires=None,
             status="Active", region=clean(a.get("REGION")),
-        ))
-        if mid:
-            by_mdcps[mid] = sid
-        counts["public"] = counts.get("public", 0) + 1
+        )
+        if t in {"A", "O"}:
+            reason = "administrative"
+        elif not a.get("LAT") or not a.get("LON"):
+            reason = "missing_coordinates"
+        else:
+            reason = None
+        _keep(publishable, excluded, make_record(program_kind_for(name, subtype), clean(a.get("CAMPUS")), reason, **row))
 
-    for f in load_features("mdc_private.json"):
+    features = load_features("mdc_private.json")
+    raw["mdc_gis_private"] = len(features)
+    for f in features:
         a = f["attributes"]
         status = clean(a.get("STATUS"))
-        if status and status.lower().startswith("clos"):
-            continue
-        if not a.get("LAT") or not a.get("LON"):
-            continue
+        name = clean(a.get("NAME")) or ""
         lo, hi = parse_grade_span(a.get("GRDLEVEL"))
         coed = {"C": "coed", "B": "boys", "G": "girls"}.get((clean(a.get("COED")) or "").upper())
-        insert_school(cur, dict(
+        row = dict(
             source="mdc_gis_private", source_id=str(a["OBJECTID"]), mdcps_id=None,
-            name=clean(a["NAME"]), category="private", subtype="private",
+            name=name, category="private", subtype="private",
             address=clean(a.get("ADDRESS")), city=clean(a.get("CITY")), zip=str(a.get("ZIPCODE") or "") or None,
             phone=clean(a.get("PHONE")), website=norm_site(a.get("WEBSITE")),
-            lat=a["LAT"], lon=a["LON"], grade_low=lo, grade_high=hi, grades_text=clean(a.get("GRDLEVEL")),
+            lat=a.get("LAT"), lon=a.get("LON"), grade_low=lo, grade_high=hi, grades_text=clean(a.get("GRDLEVEL")),
             enrollment=to_int(a.get("ENROLLMENT")), capacity=None,
             year_established=to_int(a.get("YEARESTB")), coed=coed,
             license_number=None, license_expires=None,
             status=status or None, region=None,
-        ))
-        counts["private"] = counts.get("private", 0) + 1
+        )
+        if status and status.lower().startswith("clos"):
+            reason = "closed"
+        elif not a.get("LAT") or not a.get("LON"):
+            reason = "missing_coordinates"
+        else:
+            reason = None
+        _keep(publishable, excluded, make_record(program_kind_for(name, "private"), None, reason, **row))
 
-    for f in load_features("mdc_headstart.json"):
+    features = load_features("mdc_headstart.json")
+    raw["mdc_gis_headstart"] = len(features)
+    for f in features:
         a = f["attributes"]
-        if not a.get("LAT") or not a.get("LON"):
-            continue
         early = (clean(a.get("EARLYHS")) or "").upper() == "Y" or clean(a.get("TYPE")) == "EHS"
-        insert_school(cur, dict(
+        subtype = "early_head_start" if early else "head_start"
+        name = clean(a.get("NAME")) or ""
+        row = dict(
             source="mdc_gis_headstart", source_id=str(a["OBJECTID"]), mdcps_id=None,
-            name=clean(a["NAME"]), category="early_childhood",
-            subtype="early_head_start" if early else "head_start",
+            name=name, category="early_childhood", subtype=subtype,
             address=clean(a.get("ADDRESS")), city=clean(a.get("CITY")), zip=str(a.get("ZIPCODE") or "") or None,
             phone=clean(a.get("PHONE")), website=norm_site(a.get("WEBSITE")),
-            lat=a["LAT"], lon=a["LON"],
+            lat=a.get("LAT"), lon=a.get("LON"),
             grade_low=-2 if early else -1, grade_high=-1,
             grades_text="Early Head Start (0-3) & Head Start (3-5)" if early else "Head Start (ages 3-5)",
             enrollment=None, capacity=None, year_established=None, coed=None,
             license_number=None, license_expires=None, status="Active", region=None,
-        ))
-        counts["headstart"] = counts.get("headstart", 0) + 1
+        )
+        reason = None if a.get("LAT") and a.get("LON") else "missing_coordinates"
+        _keep(publishable, excluded, make_record(program_kind_for(name, subtype), None, reason, **row))
 
-    for f in load_features("mdc_daycare.json"):
+    features = load_features("mdc_daycare.json")
+    raw["mdc_gis_daycare"] = len(features)
+    for f in features:
         a = f["attributes"]
-        if not a.get("LAT") or not a.get("LON"):
-            continue
-        insert_school(cur, dict(
+        name = clean(a.get("NAME")) or ""
+        row = dict(
             source="mdc_gis_daycare", source_id=str(a["OBJECTID"]), mdcps_id=None,
-            name=clean(a["NAME"]), category="early_childhood", subtype="daycare",
+            name=name, category="early_childhood", subtype="daycare",
             address=clean(a.get("ADDRESS")), city=clean(a.get("CITY")), zip=str(a.get("ZIPCODE") or "") or None,
             phone=clean(a.get("PHONE")), website=None,
-            lat=a["LAT"], lon=a["LON"], grade_low=-2, grade_high=-1,
+            lat=a.get("LAT"), lon=a.get("LON"), grade_low=-2, grade_high=-1,
             grades_text="Licensed child care (infant-PK)",
             enrollment=None, capacity=to_int(a.get("CAPACITY")), year_established=None, coed=None,
             license_number=clean(a.get("LICNUM")), license_expires=epoch_ms_to_date(a.get("LICEXP")),
             status="Licensed", region=None,
-        ))
-        counts["daycare"] = counts.get("daycare", 0) + 1
+        )
+        reason = None if a.get("LAT") and a.get("LON") else "missing_coordinates"
+        _keep(publishable, excluded, make_record(program_kind_for(name, "daycare"), None, reason, **row))
 
-    print("MDC inserted:", counts)
+    return publishable, excluded, raw
+
+
+_NAME_STOP = {
+    "elementary", "elem", "middle", "senior", "high", "school", "center", "ctr",
+    "k8", "plc", "academy", "acad", "the", "of", "and", "primary", "learning",
+    "preparatory", "prep", "annex", "campus", "mlc", "ecc", "es", "ms", "shs",
+}
+
+
+def _name_tokens(name: str) -> set[str]:
+    text = name.lower().replace("k-8", "k8").replace("k–8", "k8")
+    words = re.findall(r"[a-z0-9]+", text)
+    return {word for word in words if word not in _NAME_STOP and not word.isdigit() and len(word) > 1}
+
+
+def _grade_band(name: str) -> set[str]:
+    text = name.lower()
+    bands: set[str] = set()
+    if re.search(r"\b(elementary|elem)\b", text):
+        bands.add("elementary")
+    if re.search(r"\bmiddle\b", text):
+        bands.add("middle")
+    if re.search(r"\b(senior|high)\b", text):
+        bands.add("high")
+    return bands
+
+
+def _same_directory_school(directory_name: str, row_name: str) -> bool:
+    """True when this row is the directory school, not a different school sharing its number."""
+    if not (_name_tokens(directory_name) & _name_tokens(row_name)):
+        return False
+    directory_bands = _grade_band(directory_name)
+    row_bands = _grade_band(row_name)
+    return not (directory_bands and row_bands and directory_bands.isdisjoint(row_bands))
+
+
+def apply_mdcps_websites(cur: sqlite3.Cursor) -> int:
+    """Fill blank public-school websites from the checked district directory.
+
+    A location number sometimes sits on two different schools in the county file.
+    When that happens, the directory URL is stored only on the school it names.
+    """
+    path = RAW / "mdcps_websites.json"
+    if not path.exists():
+        print("WARNING: mdcps_websites.json not found; public school websites left blank")
+        return 0
+    payload = json.loads(path.read_text())
+    sites: dict[str, tuple[str, str | None]] = {}
+    for row in payload.get("schools") or []:
+        mid = clean(row.get("mdcps_id"))
+        site = clean(row.get("website"))
+        if not mid or not site or not str(site).lower().startswith(("http://", "https://")):
+            continue
+        sites[str(mid).zfill(4)] = (site, clean(row.get("name")))
+    updated = 0
+    for mid, (site, directory_name) in sites.items():
+        rows = cur.execute(
+            """SELECT id, name FROM schools
+               WHERE category = 'public' AND mdcps_id = ? AND (website IS NULL OR website = '')""",
+            (mid,),
+        ).fetchall()
+        shared = cur.execute(
+            "SELECT COUNT(*) FROM schools WHERE category = 'public' AND mdcps_id = ?",
+            (mid,),
+        ).fetchone()[0]
+        for sid, row_name in rows:
+            if shared > 1 and (not directory_name or not _same_directory_school(directory_name, row_name or "")):
+                continue
+            cur.execute("UPDATE schools SET website = ? WHERE id = ?", (site, sid))
+            already = cur.execute(
+                "SELECT 1 FROM school_sources WHERE school_id = ? AND source = 'mdcps_website'",
+                (sid,),
+            ).fetchone()
+            if not already:
+                cur.execute(
+                    """INSERT INTO school_sources (school_id, source, source_id, name, address, match_method)
+                       VALUES (?,?,?,?,?,?)""",
+                    (sid, "mdcps_website", mid, directory_name, None, "state_school_number"),
+                )
+            _tag_source(cur, sid, "mdcps_website")
+            updated += 1
+    print(f"MDCPS websites: {updated} public schools updated from {len(sites)} checked URLs")
+    return updated
+
+
+def _tag_source(cur: sqlite3.Cursor, school_id: int, source: str) -> None:
+    row = cur.execute("SELECT sources FROM schools WHERE id = ?", (school_id,)).fetchone()
+    current = json.loads(row[0] or "[]")
+    if source not in current:
+        current.append(source)
+        cur.execute("UPDATE schools SET sources = ? WHERE id = ?", (json.dumps(current), school_id))
+
+
+def _insert_flag(cur: sqlite3.Cursor, left: identity.Record, right: identity.Record, score: float, reason: str) -> None:
+    cur.execute(
+        """INSERT INTO review_flags (
+             left_source, left_source_id, left_name, left_address,
+             right_source, right_source_id, right_name, right_address,
+             relation, score, reason
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            left.source, left.source_id, left.name, left.address,
+            right.source, right.source_id, right.name, right.address,
+            "ambiguous", score, reason,
+        ),
+    )
+
+
+def publish_schools(cur: sqlite3.Cursor, records: list[identity.Record], links: list[identity.Link]) -> dict[str, list[int]]:
+    campus_keys = identity.assign_campus_keys(records, links)
+    by_mdcps: dict[str, list[int]] = {}
+    for idxs in identity.cluster_same_school(len(records), links):
+        group = [records[i] for i in idxs]
+        row, provenance = identity.merge_records(group, campus_keys.get(idxs[0]))
+        if row["lat"] is None or row["lon"] is None:
+            continue
+        sid = insert_school(cur, row)
+        for item in provenance:
+            cur.execute(
+                """INSERT INTO school_sources (school_id, source, source_id, name, address, match_method)
+                   VALUES (?,?,?,?,?,?)""",
+                (sid, item["source"], item["source_id"], item["name"], item["address"], item["match_method"]),
+            )
+        if row["mdcps_id"] and row["subtype"] != "primary_learning_center":
+            by_mdcps.setdefault(row["mdcps_id"], []).append(sid)
+    for link in links:
+        if link.relation != "ambiguous":
+            continue
+        _insert_flag(cur, records[link.left], records[link.right], link.score, link.reason)
     return by_mdcps
 
 
-def ingest_fldoe(cur: sqlite3.Cursor, by_mdcps: dict[str, int]) -> None:
+def link_after_school_care(cur: sqlite3.Cursor) -> int:
+    """Flag K-12 schools that host a county-licensed after-school or extended-care provider.
+
+    Identity resolution keeps those providers as their own rows. A provider is
+    linked to a school when it shares the normalized address, sits within 0.05 mi,
+    or carries the school's name and sits within a mile.
+    """
+    rows = cur.execute(
+        "SELECT id, name, subtype, address, lat, lon, category, grade_high FROM schools"
+    ).fetchall()
+    providers = [r for r in rows if program_kind_for(r[1], r[2]) == "afterschool"]
+    hosts = [
+        r for r in rows
+        if r[6] in ("public", "charter", "private") and r[7] is not None and r[7] >= 0
+        and program_kind_for(r[1], r[2]) == "school"
+    ]
+    host_addr = {h[0]: identity.normalize_address(h[3]) for h in hosts}
+    host_tokens = {h[0]: identity.name_tokens(h[1]) for h in hosts}
+    names: dict[int, list[str]] = {}
+    for p in providers:
+        p_addr = identity.normalize_address(p[3])
+        p_tokens = identity.name_tokens(p[1])
+        for h in hosts:
+            dist = None
+            if None not in (p[4], p[5], h[4], h[5]):
+                dist = identity.haversine_miles(p[4], p[5], h[4], h[5])
+            same_addr = bool(p_addr) and p_addr == host_addr[h[0]]
+            close = dist is not None and dist <= 0.05
+            tokens = host_tokens[h[0]]
+            named = len(tokens) >= 2 and tokens <= p_tokens and (dist is None or dist <= 1.0)
+            if same_addr or close or named:
+                bucket = names.setdefault(h[0], [])
+                if p[1] not in bucket:
+                    bucket.append(p[1])
+    for sid, provider_names in names.items():
+        cur.execute(
+            "UPDATE schools SET after_school_care = 1, after_school_care_names = ? WHERE id = ?",
+            (json.dumps(provider_names), sid),
+        )
+    print(f"after-school care: {len(providers)} licensed providers, {len(names)} host schools flagged")
+    return len(names)
+
+
+def collect_attributes() -> tuple[list[identity.Record], dict[str, int]]:
+    records: list[identity.Record] = []
+    raw: dict[str, int] = {}
+    nces_path = RAW / "nces_directory.json"
+    if nces_path.exists():
+        payload = json.loads(nces_path.read_text())
+        raw["nces"] = len(payload.get("results") or [])
+        for row in payload.get("results") or []:
+            num = str(row.get("seasch") or "").split("-")[-1].zfill(4)
+            records.append(identity.Record(
+                source="nces",
+                source_id=str(row.get("ncessch") or num),
+                name=clean(row.get("school_name")) or "",
+                category="charter" if row.get("charter") == 1 else "public",
+                subtype="attribute",
+                program_kind="attribute",
+                lat=to_float(row.get("latitude")),
+                lon=to_float(row.get("longitude")),
+                mdcps_id=num,
+                address=clean(row.get("street_location")),
+                city=clean(row.get("city_location")),
+                zip=str(row.get("zip_location") or "") or None,
+            ))
+    else:
+        raw["nces"] = 0
+    fldoe_path = RAW / "SchoolGrades26.xlsx"
+    fldoe_rows = 0
+    if fldoe_path.exists():
+        wb = openpyxl.load_workbook(fldoe_path, read_only=True)
+        ws = wb.active
+        rows = ws.iter_rows(values_only=True)
+        hdr = None
+        for row in rows:
+            if row and row[0] == "District Number":
+                hdr = list(row)
+                break
+        if hdr is not None:
+            idx = {h: i for i, h in enumerate(hdr)}
+
+            def cell(row, key):
+                i = idx.get(key)
+                return row[i] if i is not None else None
+
+            for row in rows:
+                if not row or row[0] != "13":
+                    continue
+                fldoe_rows += 1
+                num = str(cell(row, "School Number") or "").zfill(4)
+                records.append(identity.Record(
+                    source="fldoe",
+                    source_id=num,
+                    name=clean(cell(row, "School Name")) or "",
+                    category="public",
+                    subtype="attribute",
+                    program_kind="attribute",
+                    mdcps_id=num,
+                ))
+    raw["fldoe"] = fldoe_rows
+    return records, raw
+
+
+def ingest_fldoe(cur: sqlite3.Cursor, by_mdcps: dict[str, list[int]]) -> None:
     path = RAW / "SchoolGrades26.xlsx"
     if not path.exists():
         print("WARNING: SchoolGrades26.xlsx not found; skipping FLDOE grades")
@@ -326,15 +701,13 @@ def ingest_fldoe(cur: sqlite3.Cursor, by_mdcps: dict[str, int]) -> None:
             continue
         total += 1
         num = str(g(r, "School Number")).zfill(4)
-        sid = by_mdcps.get(num)
-        if not sid:
+        sids = by_mdcps.get(num) or []
+        if not sids:
             continue
         history = {str(y): clean(r[i]) for y, i in year_cols if clean(r[i])}
-        cur.execute(
-            """INSERT OR REPLACE INTO school_grades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (
-                sid, 2026, clean(g(r, "Grade 2026")), clean(g(r, "Grade 2025")), clean(g(r, "Grade 2024")),
-                json.dumps(history),
+        grade_values = (
+            2026, clean(g(r, "Grade 2026")), clean(g(r, "Grade 2025")), clean(g(r, "Grade 2024")),
+            json.dumps(history),
                 to_float(g(r, "English Language Arts Achievement")),
                 to_float(g(r, "English Language Arts Learning Gains")),
                 to_float(g(r, "English Language Arts Learning Gains of the Lowest 25%")),
@@ -351,13 +724,23 @@ def ingest_fldoe(cur: sqlite3.Cursor, by_mdcps: dict[str, int]) -> None:
                 to_float(g(r, "Percent of Economically Disadvantaged Students")),
                 yn(g(r, "Title I")), yn(g(r, "Charter School")), yn(g(r, "Alternative/ESE Center School")),
                 clean(g(r, "School Type")),
-            ),
         )
+        for sid in sids:
+            cur.execute(
+                """INSERT OR REPLACE INTO school_grades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (sid, *grade_values),
+            )
+            cur.execute(
+                """INSERT INTO school_sources (school_id, source, source_id, name, address, match_method)
+                   VALUES (?,?,?,?,?,?)""",
+                (sid, "fldoe", num, clean(g(r, "School Name")), None, "state_school_number"),
+            )
+            _tag_source(cur, sid, "fldoe")
         matched += 1
     print(f"FLDOE: {total} Miami-Dade rows, {matched} matched to GIS schools")
 
 
-def ingest_nces(cur: sqlite3.Cursor, by_mdcps: dict[str, int]) -> None:
+def ingest_nces(cur: sqlite3.Cursor, by_mdcps: dict[str, list[int]]) -> None:
     path = RAW / "nces_directory.json"
     if not path.exists():
         print("WARNING: nces_directory.json not found; skipping NCES stats")
@@ -367,8 +750,8 @@ def ingest_nces(cur: sqlite3.Cursor, by_mdcps: dict[str, int]) -> None:
     matched = 0
     for r in d["results"]:
         num = str(r.get("seasch") or "").split("-")[-1].zfill(4)
-        sid = by_mdcps.get(num)
-        if not sid:
+        sids = by_mdcps.get(num) or []
+        if not sids:
             continue
         enr = to_int(r.get("enrollment"))
         fte = to_float(r.get("teachers_fte"))
@@ -381,23 +764,32 @@ def ingest_nces(cur: sqlite3.Cursor, by_mdcps: dict[str, int]) -> None:
         hi = r.get("highest_grade_offered")
         lo = lo if isinstance(lo, int) and -2 <= lo <= 12 else None
         hi = hi if isinstance(hi, int) and -2 <= hi <= 12 else None
-        cur.execute(
-            "INSERT OR REPLACE INTO school_stats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (sid, year, r.get("ncessch"), enr, frl, frl_pct, fte, ratio,
-             r.get("magnet") if r.get("magnet") in (0, 1) else None,
-             r.get("title_i_schoolwide") if r.get("title_i_schoolwide") in (0, 1) else None,
-             r.get("title_i_eligible") if r.get("title_i_eligible") in (0, 1) else None,
-             r.get("urban_centric_locale"), lo, hi),
+        stats = (
+            year, r.get("ncessch"), enr, frl, frl_pct, fte, ratio,
+            r.get("magnet") if r.get("magnet") in (0, 1) else None,
+            r.get("title_i_schoolwide") if r.get("title_i_schoolwide") in (0, 1) else None,
+            r.get("title_i_eligible") if r.get("title_i_eligible") in (0, 1) else None,
+            r.get("urban_centric_locale"), lo, hi,
         )
-        # Fill grade span / enrollment gaps on the school row from NCES.
-        cur.execute(
-            """UPDATE schools SET
-                 grade_low = COALESCE(grade_low, ?),
-                 grade_high = COALESCE(grade_high, ?),
-                 enrollment = COALESCE(enrollment, ?)
-               WHERE id = ?""",
-            (lo, hi, enr, sid),
-        )
+        for sid in sids:
+            cur.execute(
+                "INSERT OR REPLACE INTO school_stats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (sid, *stats),
+            )
+            cur.execute(
+                """UPDATE schools SET
+                     grade_low = COALESCE(grade_low, ?),
+                     grade_high = COALESCE(grade_high, ?),
+                     enrollment = COALESCE(enrollment, ?)
+                   WHERE id = ?""",
+                (lo, hi, enr, sid),
+            )
+            cur.execute(
+                """INSERT INTO school_sources (school_id, source, source_id, name, address, match_method)
+                   VALUES (?,?,?,?,?,?)""",
+                (sid, "nces", r.get("ncessch"), clean(r.get("school_name")), clean(r.get("street_location")), "state_school_number"),
+            )
+            _tag_source(cur, sid, "nces")
         matched += 1
     print(f"NCES {year}: {len(d['results'])} rows, {matched} matched to GIS schools")
 
@@ -409,9 +801,24 @@ def main() -> int:
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.executescript(SCHEMA)
-    by_mdcps = ingest_mdc(cur)
+    publishable, excluded, raw_counts = collect_mdc()
+    attributes, attr_counts = collect_attributes()
+    raw_counts.update(attr_counts)
+    school_links = identity.link_records(publishable)
+    attr_links = identity.link_attributes(publishable, attributes)
+    report = identity.build_report(publishable, school_links, attributes, attr_links, excluded, raw_counts)
+    identity.write_report(ROOT / "data" / "audit" / "overlap_report.json", report)
+    print(identity.format_summary(report))
+    for link in attr_links:
+        if link.relation != "ambiguous":
+            continue
+        _insert_flag(cur, publishable[link.school_index], attributes[link.attr_index], link.score, link.reason)
+    by_mdcps = publish_schools(cur, publishable, school_links)
     ingest_fldoe(cur, by_mdcps)
     ingest_nces(cur, by_mdcps)
+    apply_mdcps_websites(cur)
+    offerings.ingest(cur, by_mdcps, _same_directory_school)
+    link_after_school_care(cur)
     # Derive grades_text where it was missing but NCES provided a span.
     cur.execute(
         """UPDATE schools SET grades_text =

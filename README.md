@@ -15,7 +15,7 @@ Everything runs locally: React + TypeScript + Google Maps in the browser, FastAP
 Features:
 
 - **Map** with 3,289 providers (public, charter, private, licensed child care, Head Start), clustering, category colors, home pin and radius, click-through details.
-- **Explore** panel: location geocoding (address, neighborhood, or ZIP), name search (full-text), category / grade / distance / FLDOE grade filters, distance-sorted list.
+- **Explore** panel: optional location (current location, or an address, neighborhood, or ZIP via Places Autocomplete with an offline geocode fallback), name search (full-text), category / grade / distance / FLDOE grade filters, distance-sorted list. Precise coordinates are kept for the open visit unless you choose to remember them with a match chat.
 - **Find my match**: conversational input -> structured preferences (LLM) -> SQL filtering -> deterministic weighted ranking -> LLM explanation restricted to the ranked rows. Numbered pins on the map, "why" and "tradeoffs" per school. Follow-up messages refine the previous preferences.
 - **Compare** up to 4 schools: academics, grade history, distance, size, staffing, community indicators, program signals, plus a narrative tradeoff summary. Best value per row is highlighted.
 - **Graceful degradation**: without an OpenAI key, a keyword parser and templated explanations take over; without a Google key, geocoding falls back to an offline Miami-Dade ZIP/neighborhood table and the map renders as a projected plot.
@@ -46,11 +46,11 @@ The repository ships with a pre-built `data/schoolmatch.db` and the raw source s
 | Variable | Needed for | Notes |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Conversational preference extraction, explanations, compare narrative | Server-side only. Default model `gpt-4o-mini` (`OPENAI_MODEL`). |
-| `GOOGLE_MAPS_BROWSER_KEY` | Interactive Google Map | Delivered to the browser via `GET /api/config`. In Google Cloud Console restrict it to **HTTP referrers** `http://localhost:5173/*` and to the **Maps JavaScript API**. |
+| `GOOGLE_MAPS_BROWSER_KEY` | Interactive Google Map and Places Autocomplete | Delivered to the browser via `GET /api/config`. In Google Cloud Console restrict it to **HTTP referrers** `http://localhost:5173/*` and to the **Maps JavaScript API** and **Places API (New)**. |
 | `GOOGLE_GEOCODING_KEY` | Address -> coordinates | Server-side only, never sent to the browser. If blank, falls back to `GOOGLE_MAPS_BROWSER_KEY` (then your browser key must also allow the Geocoding API and IP referrers), otherwise to the offline lookup. |
 | `GOOGLE_MAP_ID` | Optional | A Map ID for Advanced Markers/styling. Defaults to Google's `DEMO_MAP_ID`. |
 
-Enable **Maps JavaScript API** and **Geocoding API** on the Google Cloud project. Billing must be enabled on the project (the monthly free credit comfortably covers local development).
+Enable **Maps JavaScript API**, **Places API (New)**, and **Geocoding API** on the Google Cloud project. Billing must be enabled on the project (the monthly free credit comfortably covers local development).
 
 Restart the API after editing `.env`.
 
@@ -63,12 +63,18 @@ All sources are public and keyless. Ingestion was time-boxed to ~15 minutes and 
 | [Miami-Dade County Open Data](https://gis-mdc.opendata.arcgis.com/) — `SchoolSite`, `CharterSchool`, `PrivateSchool`, `Daycare`, `HeadStart` layers | Name, address, coordinates, grade span, enrollment/capacity, phone, website, licensing | MDCPS school number for public/charter |
 | [Florida DOE School Grades 2025-26](https://www.fldoe.org/accountability/accountability-reporting/school-grades/) (`SchoolGrades26.xlsx`, District 13 rows) | Letter grade and history, ELA/Math/Science/Social Studies achievement, learning gains, graduation rate, points earned, Title I, % economically disadvantaged | School number |
 | [NCES CCD](https://educationdata.urban.org/documentation/schools.html) via Urban Institute API (LEA 1200390, 2023-24) | Enrollment, free/reduced lunch, teacher FTE (-> student:teacher ratio), magnet, Title I, locale | State school id (`13-XXXX`) |
+| [M-DCPS school directory](https://mdcpswebapps2.dadeschools.net/Help) `GET /api/schools/{number}?details=true` | Official `web` URL for public schools. A URL is stored only when a GET of that exact URL returns HTTP 2xx | MDCPS location number |
+| [Your Choice Miami](https://yourchoicemiami.org/program-search) program search | Magnet and parent-choice program names, and whether a test or audition is required | MDCPS location number |
+| [CRDC 2021-22](https://educationdata.urban.org/documentation/) AP, IB, and gifted enrollment, via the Urban Institute (LEA 1200390) | Students enrolled in AP (and by subject), the IB diploma, and gifted or talented programs. A missing count stays blank | NCES school id |
+| [FHSAA member directory](https://www.fhsaahome.org/widget/school-directory-locations) | Interscholastic sport and team (boys or girls) for member high schools. A school is linked only when its directory name matches one catalog school | School name |
 
 Rebuild:
 
 ```bash
 backend/.venv/bin/python backend/ingest/fetch_mdc_gis.py   # 5 ArcGIS layers -> data/raw/mdc_*.json
 backend/.venv/bin/python backend/ingest/fetch_nces.py      # NCES directory  -> data/raw/nces_directory.json
+backend/.venv/bin/python backend/ingest/fetch_mdcps_websites.py  # public websites -> data/raw/mdcps_websites.json
+backend/.venv/bin/python backend/ingest/fetch_offerings.py     # programs, CRDC, FHSAA -> data/raw/
 # FLDOE blocks non-browser clients. Download SchoolGrades26.xlsx from the FLDOE page above
 # in a browser and save it to data/raw/SchoolGrades26.xlsx (a copy is already included).
 backend/.venv/bin/python backend/ingest/build_db.py        # normalize -> data/schoolmatch.db
@@ -89,7 +95,7 @@ frontend (Vite :5173)  --/api proxy-->  FastAPI (:8000)  -->  SQLite data/school
                                              |
                                              +--> OpenAI (prefs extraction, explanations)   [server-side key]
                                              +--> Google Geocoding                          [server-side key]
-browser --> Google Maps JavaScript API                                                       [referrer-restricted key]
+browser --> Google Maps JavaScript API and Places Autocomplete                                [referrer-restricted key]
 ```
 
 Recommendation flow (`POST /api/recommend`):
@@ -131,11 +137,14 @@ dev.sh                        run API + web app
 
 ## Limitations
 
-- Program information (STEM, bilingual, Montessori, faith-based, etc.) is inferred from provider names and the NCES magnet flag; the public datasets do not include program catalogs. The UI labels these as "name signals".
+- Magnet and parent-choice program names come from the district catalog. Other themes (Montessori, faith-based, and similar) are still inferred from the provider name when no catalog row exists.
+- AP, IB, and gifted figures are 2021-22 enrollment counts, not a current course list. A blank count means that figure was not reported.
+- FHSAA sports cover member high schools only. Club lists, and sports at elementary and middle schools, are not in a public file.
+- The International Baccalaureate school directory blocks automated download. IB program names in the district catalog, and IB diploma enrollment in the CRDC, are what this app stores.
 - Florida does not grade private schools or early-childhood providers, so academic comparisons are only available for public and charter schools.
 - Tuition, admissions, ratings, and reviews are not in any public source used here and are therefore not shown.
 - Daycare license expiration dates come straight from the county layer and may be stale.
 
 ## Attribution
 
-Data: Miami-Dade County Information Technology Department (Open Data), Florida Department of Education, National Center for Education Statistics via the Urban Institute Education Data Portal. Map: Google Maps Platform.
+Data: Miami-Dade County Information Technology Department (Open Data), Miami-Dade County Public Schools choice catalog, Florida Department of Education, National Center for Education Statistics and the Civil Rights Data Collection via the Urban Institute Education Data Portal, Florida High School Athletic Association. Map: Google Maps Platform.

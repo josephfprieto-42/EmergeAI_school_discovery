@@ -12,9 +12,9 @@ export function CompareTray() {
   const pool = [...schools, ...(recommendation?.results ?? [])]
   const items = compareIds.map((id) => pool.find((s) => s.id === id)).filter((s): s is School => !!s)
   return (
-    <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 pl-3 shadow-2xl backdrop-blur">
-      <GitCompareArrows className="size-4 text-slate-500" />
-      <div className="flex max-w-[60vw] items-center gap-1.5 overflow-x-auto">
+    <div className="pointer-events-auto flex w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 pl-3 shadow-lg backdrop-blur md:w-auto md:shadow-2xl">
+      <GitCompareArrows className="size-4 shrink-0 text-slate-500" />
+      <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto md:max-w-[60vw] md:flex-none">
         {items.map((s) => (
           <span key={s.id} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 py-1 pl-2 pr-1 text-xs font-medium text-slate-700">
             <GradeBadge grade={s.fl_grade} size="sm" />
@@ -26,10 +26,10 @@ export function CompareTray() {
         ))}
         {compareIds.length < 4 && <span className="shrink-0 text-xs text-slate-400">Add up to {4 - compareIds.length} more</span>}
       </div>
-      <button onClick={() => setCompareOpen(true)} disabled={compareIds.length < 2} className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40">
+      <button onClick={() => setCompareOpen(true)} disabled={compareIds.length < 2} className="shrink-0 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40">
         Compare {compareIds.length >= 2 ? `(${compareIds.length})` : ''}
       </button>
-      <button onClick={clearCompare} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Clear">
+      <button onClick={clearCompare} className="shrink-0 rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Clear">
         <X className="size-4" />
       </button>
     </div>
@@ -56,7 +56,22 @@ const ROWS: Row[] = [
   { label: 'Free/reduced lunch', render: (s) => fmtPct(s.frl_pct) },
   { label: 'Title I', render: (s) => (s.fl_title_i == null ? '—' : s.fl_title_i ? 'Yes' : 'No') },
   { label: 'Magnet', render: (s) => (s.magnet == null ? '—' : s.magnet ? 'Yes' : 'No') },
-  { label: 'Programs (name signals)', render: (s) => (s.ranking?.keyword_hits?.length ? s.ranking.keyword_hits.map((h) => h.split(':').pop()).join(', ') : '—'), group: 'Fit' },
+  {
+    label: 'Programs',
+    render: (s) => (s.programs?.length ? s.programs.map((p) => p.name).join(', ') : 'Not reported'),
+    group: 'Programs and activities',
+  },
+  {
+    label: 'AP enrollment (2021-22)',
+    render: (s) => fmtNum(s.academics?.ap_enrollment),
+    better: (s) => s.academics?.ap_enrollment ?? null,
+  },
+  { label: 'Gifted enrollment (2021-22)', render: (s) => fmtNum(s.academics?.gifted_enrollment), better: (s) => s.academics?.gifted_enrollment ?? null },
+  { label: 'IB enrollment (2021-22)', render: (s) => fmtNum(s.academics?.ib_enrollment), better: (s) => s.academics?.ib_enrollment ?? null },
+  {
+    label: 'FHSAA sports',
+    render: (s) => (s.sports?.length ? [...new Set(s.sports.map((sport) => sport.sport))].join(', ') : 'Not reported'),
+  },
   { label: 'Match score', render: (s) => (s.ranking ? `${Math.round(s.ranking.score * 100)} / 100` : '—'), better: (s) => s.ranking?.score ?? null },
 ]
 
@@ -66,9 +81,9 @@ export function CompareModal() {
   const base = compareResult?.schools ?? []
   const schools = base.map((s) => ({ ...s, ranking: recommendation?.results.find((r) => r.id === s.id)?.ranking }))
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-6" onClick={() => setCompareOpen(false)}>
-      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm md:items-center md:p-6" onClick={() => setCompareOpen(false)}>
+      <div className="flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl md:h-auto md:max-h-[92vh] md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-5 md:py-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Side-by-side comparison</h2>
             <p className="text-xs text-slate-500">Verified public data · Miami-Dade County GIS, Florida DOE, NCES</p>
@@ -85,10 +100,10 @@ export function CompareModal() {
             </div>
           ) : (
             <>
-              <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+              <div className="border-b border-slate-100 bg-slate-50 px-4 py-4 md:px-5">
                 <p className="text-sm leading-relaxed text-slate-700">{compareResult.summary}</p>
                 {compareResult.tradeoffs.length > 0 && (
-                  <ul className="mt-3 grid gap-1.5 text-xs text-slate-600 sm:grid-cols-2">
+                  <ul className="mt-3 grid gap-1.5 text-xs text-slate-600 md:grid-cols-2">
                     {compareResult.tradeoffs.map((t, i) => (
                       <li key={i} className="flex gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
                         <span className="mt-1 size-1.5 shrink-0 rounded-full bg-brand-500" />
@@ -103,9 +118,9 @@ export function CompareModal() {
               <table className="w-full border-separate border-spacing-0 text-sm">
                 <thead className="sticky top-0 z-10 bg-white">
                   <tr>
-                    <th className="w-44 border-b border-slate-200 px-5 py-3 text-left text-xs font-medium text-slate-400"></th>
+                    <th className="sticky left-0 z-20 w-32 min-w-32 border-b border-r border-slate-200 bg-white px-3 py-3 text-left text-xs font-medium text-slate-400 md:w-44 md:min-w-44 md:border-r-0 md:px-5"></th>
                     {schools.map((s) => (
-                      <th key={s.id} className="min-w-[180px] border-b border-slate-200 px-3 py-3 text-left align-top">
+                      <th key={s.id} className="min-w-[160px] border-b border-slate-200 px-3 py-3 text-left align-top md:min-w-[180px]">
                         <button onClick={() => void select(s.id)} className="text-left font-semibold leading-tight text-slate-900 hover:text-brand-600">
                           {s.name}
                         </button>
@@ -128,13 +143,13 @@ export function CompareModal() {
                       <Fragment key={row.label}>
                         {row.group && (
                           <tr>
-                            <td colSpan={schools.length + 1} className="bg-slate-50 px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                              {row.group}
+                            <td colSpan={schools.length + 1} className="bg-slate-50 px-0 py-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                              <div className="sticky left-0 w-fit max-w-full px-3 py-1.5 md:px-5">{row.group}</div>
                             </td>
                           </tr>
                         )}
                         <tr className="hover:bg-slate-50/60">
-                          <td className="border-b border-slate-100 px-5 py-2.5 text-xs font-medium text-slate-500">{row.label}</td>
+                          <td className="sticky left-0 z-10 border-b border-r border-slate-100 bg-white px-3 py-2.5 text-xs font-medium text-slate-500 md:border-r-0 md:px-5">{row.label}</td>
                           {schools.map((s, i) => (
                             <td key={s.id} className={clsx('border-b border-slate-100 px-3 py-2.5 font-medium text-slate-800', row.better && distinct && vals[i] === max && 'bg-emerald-50 text-emerald-800')}>
                               {row.render(s)}

@@ -1,7 +1,7 @@
 import type { Category } from '../types'
 
 export const CATEGORY_META: Record<Category, { label: string; short: string; color: string; bg: string; text: string; ring: string }> = {
-  public: { label: 'Public', short: 'Public', color: '#2563eb', bg: 'bg-blue-50', text: 'text-blue-700', ring: 'ring-blue-200' },
+  public: { label: 'Public', short: 'Public', color: '#001ae6', bg: 'bg-brand-50', text: 'text-brand-700', ring: 'ring-brand-200' },
   charter: { label: 'Charter', short: 'Charter', color: '#7c3aed', bg: 'bg-violet-50', text: 'text-violet-700', ring: 'ring-violet-200' },
   private: { label: 'Private', short: 'Private', color: '#d97706', bg: 'bg-amber-50', text: 'text-amber-700', ring: 'ring-amber-200' },
   early_childhood: { label: 'Early childhood', short: 'Early', color: '#059669', bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-200' },

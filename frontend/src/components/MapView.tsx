@@ -1,11 +1,13 @@
 import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markerclusterer'
-import { APIProvider, Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
+import { Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { useEffect, useMemo, useRef } from 'react'
+import { useIsDesktop } from '../hooks/useMediaQuery'
 import { CATEGORY_META } from '../lib/format'
 import { useStore } from '../store'
 import type { School } from '../types'
 
 const MIAMI = { lat: 25.76, lng: -80.3 }
+const BRAND_BLUE = CATEGORY_META.public.color
 
 function markerContent(s: School, rank: number | null, state: 'normal' | 'selected' | 'hover'): HTMLElement {
   const el = document.createElement('div')
@@ -123,12 +125,69 @@ function Markers() {
   return null
 }
 
+/** Bottom-sheet inset, capped so padding never exceeds the visible map. */
+function usableInset(map: google.maps.Map, inset: number): number {
+  const h = map.getDiv().clientHeight || 0
+  return Math.max(0, Math.min(inset, Math.round(h * 0.55)))
+}
+
+function pinContent(label: string, dotColor: string): HTMLElement {
+  const el = document.createElement('div')
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:6px;background:white;border-radius:9999px;padding:4px 10px 4px 6px;box-shadow:0 2px 10px rgba(0,0,0,.25);font:600 12px Inter,system-ui,sans-serif;color:#0f172a"><span style="width:14px;height:14px;border-radius:9999px;background:${dotColor};border:3px solid white;box-shadow:0 0 0 2px ${dotColor}"></span>${label}</div>`
+  return el
+}
+
+/** Work pin and a dashed home-to-work line, plus one pin per activity place. */
+function HouseholdPins() {
+  const map = useMap()
+  const markerLib = useMapsLibrary('marker')
+  const { origin, work, recommendation } = useStore()
+  const pinsRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([])
+  const lineRef = useRef<google.maps.Polyline | null>(null)
+  const activityPoints = useMemo(() => recommendation?.activity_points ?? [], [recommendation])
+
+  useEffect(() => {
+    if (!map || !markerLib) return
+    pinsRef.current.forEach((p) => (p.map = null))
+    pinsRef.current = []
+    lineRef.current?.setMap(null)
+    lineRef.current = null
+    activityPoints.forEach((a) => {
+      pinsRef.current.push(new markerLib.AdvancedMarkerElement({ map, position: { lat: a.lat, lng: a.lon }, content: pinContent(a.label, '#d97706'), zIndex: 8800 }))
+    })
+    if (!work) return
+    pinsRef.current.push(new markerLib.AdvancedMarkerElement({ map, position: work, content: pinContent('Work', '#7c3aed'), zIndex: 8900 }))
+    if (origin) {
+      lineRef.current = new google.maps.Polyline({
+        map,
+        path: [origin, work],
+        strokeOpacity: 0,
+        icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.6, strokeColor: '#7c3aed', scale: 3 }, offset: '0', repeat: '14px' }],
+        clickable: false,
+      })
+    }
+  }, [map, markerLib, origin, work, activityPoints])
+  return null
+}
+
 function HomeAndRadius() {
   const map = useMap()
   const markerLib = useMapsLibrary('marker')
-  const { origin, filters, fitRequest, recommendation, selected } = useStore()
+  const { origin, filters, fitRequest, recommendation, selected, work } = useStore()
   const circleRef = useRef<google.maps.Circle | null>(null)
   const homeRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
+  // Read at call time so inset changes alone never re-run the fit/pan effects.
+  const currentInset = () => useStore.getState().mapInsetBottom
+  const mapInsetBottom = useStore((s) => s.mapInsetBottom)
+  const initialPanDone = useRef(false)
+
+  // On first load under a bottom sheet, nudge the default view so the county (not the
+  // area north of it) sits in the uncovered part of the map. Later fits take precedence.
+  useEffect(() => {
+    if (!map || initialPanDone.current || mapInsetBottom === 0 || origin || recommendation) return
+    initialPanDone.current = true
+    map.panBy(0, usableInset(map, mapInsetBottom) / 2)
+  }, [map, mapInsetBottom, origin, recommendation])
 
   useEffect(() => {
     if (!map || !markerLib) return
@@ -143,9 +202,9 @@ function HomeAndRadius() {
         map,
         center: origin,
         radius: filters.radius * 1609.34,
-        fillColor: '#2563eb',
+        fillColor: BRAND_BLUE,
         fillOpacity: 0.06,
-        strokeColor: '#2563eb',
+        strokeColor: BRAND_BLUE,
         strokeOpacity: 0.5,
         strokeWeight: 1.5,
         clickable: false,
@@ -163,6 +222,7 @@ function HomeAndRadius() {
         n++
       })
       if (origin) b.extend(origin)
+      if (work) b.extend(work)
     } else if (origin) {
       const r = (filters.radius ?? 3) * 1609.34
       const c = new google.maps.Circle({ center: origin, radius: r })
@@ -172,37 +232,65 @@ function HomeAndRadius() {
         n++
       }
     }
-    if (n > 0) map.fitBounds(b, 60)
-  }, [map, fitRequest, recommendation, origin, filters.radius])
+    if (n > 0) {
+      const pad = 60
+      map.fitBounds(b, { top: pad, left: pad, right: pad, bottom: pad + usableInset(map, currentInset()) })
+    }
+  }, [map, fitRequest, recommendation, origin, work, filters.radius])
 
   useEffect(() => {
     if (!map || !selected) return
     const p = { lat: selected.lat, lng: selected.lon }
+    const inset = usableInset(map, currentInset())
     const bounds = map.getBounds()
-    if (!bounds || !bounds.contains(p)) map.panTo(p)
+    if (!bounds) {
+      map.panTo(p)
+      return
+    }
+    if (inset === 0) {
+      if (!bounds.contains(p)) map.panTo(p)
+      return
+    }
+    // A sheet covers the bottom of the map: the pin must land in the uncovered strip.
+    const proj = map.getProjection()
+    const zoom = map.getZoom()
+    const mapH = map.getDiv().clientHeight
+    const pt = proj?.fromLatLngToPoint(p)
+    const top = proj?.fromLatLngToPoint(bounds.getNorthEast())
+    if (!proj || zoom == null || !pt || !top || !mapH) {
+      if (!bounds.contains(p)) map.panTo(p)
+      return
+    }
+    const scale = 2 ** zoom
+    const yPx = (pt.y - top.y) * scale
+    const visible = bounds.contains(p) && yPx > 40 && yPx < mapH - inset - 40
+    if (visible) return
+    // Centre the pin in the visible strip: shift the map centre south by half the inset.
+    const target = proj.fromPointToLatLng(new google.maps.Point(pt.x, pt.y + inset / 2 / scale))
+    if (target) map.panTo(target)
   }, [map, selected])
 
   return null
 }
 
-function GoogleMapView({ apiKey, mapId }: { apiKey: string; mapId: string }) {
+function GoogleMapView({ mapId }: { mapId: string }) {
+  const isDesktop = useIsDesktop()
   return (
-    <APIProvider apiKey={apiKey} libraries={['marker']}>
-      <Map
-        defaultCenter={MIAMI}
-        defaultZoom={10}
-        mapId={mapId}
-        gestureHandling="greedy"
-        disableDefaultUI
-        zoomControl
-        clickableIcons={false}
-        className="h-full w-full"
-        onClick={() => void useStore.getState().select(null)}
-      >
-        <Markers />
-        <HomeAndRadius />
-      </Map>
-    </APIProvider>
+    <Map
+      defaultCenter={MIAMI}
+      defaultZoom={10}
+      mapId={mapId}
+      gestureHandling="greedy"
+      disableDefaultUI
+      zoomControl={isDesktop}
+      clickableIcons={false}
+      className="h-full w-full"
+      onClick={() => void useStore.getState().select(null)}
+    >
+      <Markers />
+      <HomeAndRadius />
+      <HouseholdPins />
+    </Map>
   )
 }
 
@@ -212,7 +300,7 @@ function GoogleMapView({ apiKey, mapId }: { apiKey: string; mapId: string }) {
 const FB = { s: 25.3, w: -80.65, n: 26.0, e: -80.08 }
 
 function FallbackMap() {
-  const { schools, recommendation, selectedId, hoverId, select, setHover, origin, filters } = useStore()
+  const { schools, recommendation, selectedId, hoverId, select, setHover, origin, filters, work } = useStore()
   const W = 1000
   const H = Math.round((W * (FB.n - FB.s)) / ((FB.e - FB.w) * Math.cos((25.7 * Math.PI) / 180)))
   const px = (lon: number) => ((lon - FB.w) / (FB.e - FB.w)) * W
@@ -228,6 +316,7 @@ function FallbackMap() {
     const ext = (x: number, y: number, r = 0) => { x0 = Math.min(x0, x - r); y0 = Math.min(y0, y - r); x1 = Math.max(x1, x + r); y1 = Math.max(y1, y + r) }
     focus.forEach((s) => ext(px(s.lon), py(s.lat)))
     if (origin) ext(px(origin.lng), py(origin.lat), radiusPx)
+    if (work) ext(px(work.lng), py(work.lat))
     const pad = Math.max(20, (x1 - x0) * 0.15, (y1 - y0) * 0.15)
     const vw = Math.max(80, x1 - x0 + pad * 2), vh = Math.max(80, y1 - y0 + pad * 2)
     vb = `${x0 - pad} ${y0 - pad} ${vw} ${vh}`
@@ -236,7 +325,7 @@ function FallbackMap() {
     <div className="relative h-full w-full bg-[#e8eef5]">
       <svg viewBox={vb} className="h-full w-full" preserveAspectRatio="xMidYMid meet" onClick={() => void select(null)}>
         <rect width={W} height={H} fill="#e8eef5" />
-        {origin && radiusPx > 0 && <circle cx={px(origin.lng)} cy={py(origin.lat)} r={radiusPx} fill="#2563eb" fillOpacity={0.07} stroke="#2563eb" strokeOpacity={0.5} strokeWidth={1.5} />}
+        {origin && radiusPx > 0 && <circle cx={px(origin.lng)} cy={py(origin.lat)} r={radiusPx} fill={BRAND_BLUE} fillOpacity={0.07} stroke={BRAND_BLUE} strokeOpacity={0.5} strokeWidth={1.5} />}
         {schools.map((s) => {
           const r = ranked.get(s.id)
           const active = s.id === selectedId || s.id === hoverId
@@ -252,9 +341,16 @@ function FallbackMap() {
             </g>
           )
         })}
+        {origin && work && <line x1={px(origin.lng)} y1={py(origin.lat)} x2={px(work.lng)} y2={py(work.lat)} stroke="#7c3aed" strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="4 4" />}
         {origin && (
           <g>
             <circle cx={px(origin.lng)} cy={py(origin.lat)} r={7} fill="#0f172a" stroke="white" strokeWidth={2.5} />
+          </g>
+        )}
+        {work && (
+          <g>
+            <circle cx={px(work.lng)} cy={py(work.lat)} r={7} fill="#7c3aed" stroke="white" strokeWidth={2.5} />
+            <title>Work</title>
           </g>
         )}
       </svg>
@@ -268,6 +364,6 @@ function FallbackMap() {
 export function MapView() {
   const config = useStore((s) => s.config)
   if (!config) return <div className="h-full w-full animate-pulse bg-slate-100" />
-  if (config.maps_browser_key) return <GoogleMapView apiKey={config.maps_browser_key} mapId={config.map_id ?? 'DEMO_MAP_ID'} />
+  if (config.maps_browser_key) return <GoogleMapView mapId={config.map_id ?? 'DEMO_MAP_ID'} />
   return <FallbackMap />
 }

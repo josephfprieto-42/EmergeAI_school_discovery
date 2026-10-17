@@ -5,15 +5,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import db
+from . import db, sessions
 from .config import CORS_ORIGINS
-from .routers import compare, geo, recommend, schools
+from .routers import compare, geo, recommend, schools, sessions as sessions_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.con = db.connect()
+    app.state.sessions = sessions.connect()
     yield
+    app.state.sessions.close()
     app.state.con.close()
 
 
@@ -27,6 +29,7 @@ app.add_middleware(
 app.include_router(schools.router)
 app.include_router(geo.router)
 app.include_router(recommend.router)
+app.include_router(sessions_router.router)
 app.include_router(compare.router)
 
 

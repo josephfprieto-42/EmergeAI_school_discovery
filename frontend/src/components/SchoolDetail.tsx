@@ -1,21 +1,38 @@
 import clsx from 'clsx'
-import { ExternalLink, GitCompareArrows, Phone, X } from 'lucide-react'
-import { fmtNum, fmtPct, gradeSpan, SUBTYPE_LABEL } from '../lib/format'
+import { ExternalLink, GitCompareArrows, Heart, Phone, Sparkles, X } from 'lucide-react'
+import { CATEGORY_META, fmtNum, fmtPct, gradeSpan, SUBTYPE_LABEL } from '../lib/format'
 import { useStore } from '../store'
 import { CategoryPill, GradeBadge, Stat } from './ui'
 
-export function SchoolDetail() {
-  const { selected, select, compareIds, toggleCompare, recommendation } = useStore()
+/**
+ * `card`: floating panel over the map (desktop). `sheet`: fills a mobile bottom sheet, which
+ * already provides the rounded corners and shadow.
+ */
+export function SchoolDetail({ variant = 'card' }: { variant?: 'card' | 'sheet' }) {
+  const { selected, select, compareIds, toggleCompare, recommendation, favoriteIds, toggleFavorite, setMode, sendChat, chatLoading } = useStore()
   if (!selected) return null
   const s = selected
   const inCompare = compareIds.includes(s.id)
+  const saved = favoriteIds.includes(s.id)
+
+  function askAi() {
+    if (chatLoading) return
+    const place = s.city ? ` in ${s.city}` : ''
+    setMode('match')
+    void sendChat(`Tell me about ${s.name}, a ${CATEGORY_META[s.category].label} school${place}.`, { preserveFilters: true })
+  }
   const graded = s.category === 'public' || s.category === 'charter'
   const explanation = recommendation?.explanations.find((e) => e.school_id === s.id)
   const history = s.grade_history ? Object.entries(s.grade_history).sort((a, b) => Number(b[0]) - Number(a[0])).slice(0, 6) : []
 
   return (
-    <aside className="pointer-events-auto flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-      <div className="flex items-start gap-3 border-b border-slate-100 p-4">
+    <aside
+      className={clsx(
+        'pointer-events-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-white',
+        variant === 'card' ? 'h-full rounded-2xl border border-slate-200 shadow-2xl' : 'h-full',
+      )}
+    >
+      <div className={clsx('flex items-start gap-3 border-b border-slate-100 p-4', variant === 'sheet' && 'pt-1')}>
         <GradeBadge grade={s.fl_grade} size="lg" />
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold leading-tight text-slate-900">{s.name}</h2>
@@ -53,7 +70,7 @@ export function SchoolDetail() {
 
         {explanation && (
           <div className="rounded-xl border border-brand-100 bg-brand-50 p-3 text-sm text-slate-700">
-            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-brand-700">Why it matched</div>
+            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-accent">Why it matched</div>
             <p>{explanation.why}</p>
             <p className="mt-1 text-xs text-slate-500">
               <span className="font-medium">Tradeoffs:</span> {explanation.tradeoffs}
@@ -111,6 +128,59 @@ export function SchoolDetail() {
             )}
           </section>
         )}
+        {(s.programs?.length || s.academics || s.sports?.length) ? (
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Programs and activities</h3>
+            {s.programs && s.programs.length > 0 && (
+              <div>
+                <div className="mb-1 text-[11px] font-medium text-slate-400">M-DCPS magnet and choice programs</div>
+                <ul className="space-y-1 text-sm text-slate-700">
+                  {s.programs.map((program) => (
+                    <li key={`${program.kind}-${program.name}`} className="flex flex-wrap items-center gap-2">
+                      <span>{program.name}</span>
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                        {program.kind === 'magnet' ? 'Magnet' : 'Choice'}
+                      </span>
+                      {program.test_required && <span className="text-[10px] text-slate-400">Test or audition required</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {s.academics && (
+              <div>
+                <div className="mb-1 text-[11px] font-medium text-slate-400">Students enrolled, CRDC 2021-22</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ['Advanced Placement', s.academics.ap_enrollment],
+                    ['AP math', s.academics.ap_math],
+                    ['AP science', s.academics.ap_science],
+                    ['AP computer science', s.academics.ap_compsci],
+                    ['AP language', s.academics.ap_language],
+                    ['IB diploma', s.academics.ib_enrollment],
+                    ['Gifted and talented', s.academics.gifted_enrollment],
+                  ].filter((entry): entry is [string, number] => typeof entry[1] === 'number').map(([label, value]) => (
+                    <Stat key={label} label={label} value={fmtNum(value)} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {s.sports && s.sports.length > 0 && (
+              <div>
+                <div className="mb-1 text-[11px] font-medium text-slate-400">FHSAA interscholastic sports</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {s.sports.map((sport) => (
+                    <span key={`${sport.sport}-${sport.team ?? ''}`} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                      {sport.sport}
+                      {sport.team ? ` (${sport.team.toLowerCase()})` : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        ) : null}
+
         {!graded && (
           <p className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
             Florida does not publish school grades or test results for {s.category === 'private' ? 'private schools' : 'early childhood providers'}. Information shown comes from Miami-Dade County's public directory.
@@ -118,20 +188,46 @@ export function SchoolDetail() {
         )}
 
         <div className="text-[11px] text-slate-400">
-          Sources: Miami-Dade County Open Data{graded ? ', Florida DOE School Grades 2025-26, NCES Common Core of Data' : ''}.
+          Sources: Miami-Dade County Open Data
+          {graded ? ', Florida DOE School Grades 2025-26, NCES Common Core of Data' : ''}
+          {s.programs?.length ? ', M-DCPS magnet and choice catalog' : ''}
+          {s.academics ? ', CRDC 2021-22' : ''}
+          {s.sports?.length ? ', FHSAA' : ''}.
         </div>
       </div>
 
-      <div className="border-t border-slate-100 p-3">
+      <div className="grid grid-cols-3 gap-2 border-t border-slate-100 p-3">
         <button
-          onClick={() => toggleCompare(s.id)}
+          type="button"
+          onClick={() => toggleFavorite(s.id)}
           className={clsx(
-            'inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition',
+            'inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium transition',
+            saved ? 'bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+          )}
+        >
+          <Heart className={clsx('size-3.5', saved && 'fill-current')} />
+          {saved ? 'Saved' : 'Save'}
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleCompare(s.id)}
+          disabled={!inCompare && compareIds.length >= 4}
+          className={clsx(
+            'inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium transition disabled:opacity-40',
             inCompare ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800',
           )}
         >
-          <GitCompareArrows className="size-4" />
-          {inCompare ? 'Remove from comparison' : compareIds.length >= 4 ? 'Comparison full (4 max)' : 'Add to comparison'}
+          <GitCompareArrows className="size-3.5" />
+          {inCompare ? 'Added' : 'Compare'}
+        </button>
+        <button
+          type="button"
+          onClick={askAi}
+          disabled={chatLoading}
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-2 py-2 text-xs font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
+        >
+          <Sparkles className="size-3.5" />
+          Ask AI
         </button>
       </div>
     </aside>
